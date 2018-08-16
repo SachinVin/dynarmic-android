@@ -45,4 +45,9 @@ u8 RecipEstimate(u64 a);
  */
 u8 RecipSqrtEstimate(u64 a);
 
+template <typename T>
+constexpr bool IsPow2(T imm){
+    return imm > 0 && (imm & (imm - 1)) == 0;
+}
+
 } // namespace Dynarmic::Common
