@@ -329,6 +329,13 @@ if (ARCHITECTURE_x86_64)
     else()
         target_sources(dynarmic PRIVATE backend/x64/exception_handler_generic.cpp)
     endif()
+elseif(ARCHITECTURE_Aarch64)
+    target_sources(dynarmic PRIVATE
+         backend/A64/emitter/a64_emitter.cpp
+         backend/A64/emitter/a64_emitter.h
+         backend/A64/emitter/arm_common.h
+         backend/A64/emitter/code_block.h
+    )
 else()
     message(FATAL_ERROR "Unsupported architecture")
 endif()

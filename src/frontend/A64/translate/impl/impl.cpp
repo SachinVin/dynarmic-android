@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: 0BSD
  */
 
+#include "frontend/A64/translate/impl/impl.h"
 #include "common/bit_util.h"
 #include "frontend/ir/terminal.h"
-#include "frontend/A64/translate/impl/impl.h"
 
 namespace Dynarmic::A64 {
 
