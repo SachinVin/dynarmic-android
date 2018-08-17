@@ -30,6 +30,16 @@ matrix:
             - ninja-build
       install: ./.travis/build-x86_64-linux/deps.sh
       script: ./.travis/build-x86_64-linux/build.sh
+    - env: NAME="Linux aarch64 Build"
+      os: linux
+      dist: trusty
+      sudo: required
+      services: docker
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+      script: ./.travis/build-aarch64-linux/run.sh
     - env: NAME="macOS Build"
       os: osx
       sudo: false
