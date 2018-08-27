@@ -269,6 +269,7 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/emitter/a64_emitter.h
          backend/A64/emitter/arm_common.h
          backend/A64/emitter/code_block.h
+         backend/A64/jitstate_info.h
     )
 else()
     message(FATAL_ERROR "Unsupported architecture")
