@@ -27,7 +27,11 @@ std::vector<ArmMatcher<V>> GetArmDecodeTable() {
     std::vector<ArmMatcher<V>> table = {
 
 #define INST(fn, name, bitstring) Decoder::detail::detail<ArmMatcher<V>>::GetMatcher(&V::fn, name, bitstring),
+#ifdef ARCHITECTURE_Aarch64
+#include "arm_a64.inc"
+#else
 #include "arm.inc"
+#endif
 #undef INST
 
     };
