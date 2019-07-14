@@ -42,17 +42,17 @@ static size_t MJitStateReg(A32::Reg reg) {
     return offsetof(A32JitState, Reg) + sizeof(u32) * static_cast<size_t>(reg);    
 }
 
-//static size_t MJitStateExtReg(A32::ExtReg reg) {
-//    if (A32::IsSingleExtReg(reg)) {
-//        size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::S0);
-//        return offsetof(A32JitState, ExtReg) + sizeof(u32) * index;
-//    }
-//    if (A32::IsDoubleExtReg(reg)) {
-//        size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::D0);
-//        return offsetof(A32JitState, ExtReg) + sizeof(u64) * index;
-//    }
-//    ASSERT_MSG(false, "Should never happen.");
-//}
+static size_t MJitStateExtReg(A32::ExtReg reg) {
+    if (A32::IsSingleExtReg(reg)) {
+        size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::S0);
+        return offsetof(A32JitState, ExtReg) + sizeof(u32) * index;
+    }
+    if (A32::IsDoubleExtReg(reg)) {
+        size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::D0);
+        return offsetof(A32JitState, ExtReg) + sizeof(u64) * index;
+    }
+    ASSERT_MSG(false, "Should never happen.");
+}
 
 A32EmitContext::A32EmitContext(RegAlloc& reg_alloc, IR::Block& block) : EmitContext(reg_alloc, block) {}
 
@@ -330,61 +330,62 @@ void A32EmitA64::EmitA32GetRegister(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
-//void A32EmitA64::EmitA32GetExtendedRegister32(A32EmitContext& ctx, IR::Inst* inst) {
-//    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
-//    ASSERT(A32::IsSingleExtReg(reg));
-//
-//    Xbyak::Xmm result = ctx.reg_alloc.ScratchXmm();
-//    code.movss(result, MJitStateExtReg(reg));
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
-//
-//void A32EmitA64::EmitA32GetExtendedRegister64(A32EmitContext& ctx, IR::Inst* inst) {
-//    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
-//    ASSERT(A32::IsDoubleExtReg(reg));
-//
-//    Xbyak::Xmm result = ctx.reg_alloc.ScratchXmm();
-//    code.movsd(result, MJitStateExtReg(reg));
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
+void A32EmitA64::EmitA32GetExtendedRegister32(A32EmitContext& ctx, IR::Inst* inst) {
+    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
+    ASSERT(A32::IsSingleExtReg(reg));
+
+    ARM64Reg result = ctx.reg_alloc.ScratchFpr();
+    code.fp_emitter.LDR(32, INDEX_UNSIGNED, result, X28, MJitStateExtReg(reg));
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void A32EmitA64::EmitA32GetExtendedRegister64(A32EmitContext& ctx, IR::Inst* inst) {
+    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
+    ASSERT(A32::IsDoubleExtReg(reg));
+
+    ARM64Reg result = ctx.reg_alloc.ScratchFpr();
+    code.fp_emitter.LDR(64, INDEX_UNSIGNED, result, X28, MJitStateExtReg(reg));
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 
 void A32EmitA64::EmitA32SetRegister(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     A32::Reg reg = inst->GetArg(0).GetA32RegRef();
     if (args[1].IsInFpr()) {
         Arm64Gen::ARM64Reg to_store = ctx.reg_alloc.UseFpr(args[1]);
-        code.fp_emitter.STR(sizeof(u32), INDEX_UNSIGNED, to_store, X28, MJitStateReg(reg));
+        code.fp_emitter.STR(32, INDEX_UNSIGNED, to_store, X28, MJitStateReg(reg));
     } else {
         Arm64Gen::ARM64Reg to_store = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
         code.STR(INDEX_UNSIGNED, to_store, X28, MJitStateReg(reg));
     }
 }
 
-//void A32EmitA64::EmitA32SetExtendedRegister32(A32EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
-//    ASSERT(A32::IsSingleExtReg(reg));
-//    if (args[1].IsInXmm()) {
-//        Xbyak::Xmm to_store = ctx.reg_alloc.UseXmm(args[1]);
-//        code.movss(MJitStateExtReg(reg), to_store);
-//    } else {
-//        Xbyak::Reg32 to_store = ctx.reg_alloc.UseGpr(args[1]).cvt32();
-//        code.mov(MJitStateExtReg(reg), to_store);
-//    }
-//}
-//
-//void A32EmitA64::EmitA32SetExtendedRegister64(A32EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
-//    ASSERT(A32::IsDoubleExtReg(reg));
-//    if (args[1].IsInXmm()) {
-//        Xbyak::Xmm to_store = ctx.reg_alloc.UseXmm(args[1]);
-//        code.movsd(MJitStateExtReg(reg), to_store);
-//    } else {
-//        Xbyak::Reg64 to_store = ctx.reg_alloc.UseGpr(args[1]);
-//        code.mov(MJitStateExtReg(reg), to_store);
-//    }
-//}
+void A32EmitA64::EmitA32SetExtendedRegister32(A32EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
+    ASSERT(A32::IsSingleExtReg(reg));
+    if (args[1].IsInFpr()) {
+        ARM64Reg to_store = ctx.reg_alloc.UseFpr(args[1]);
+        code.fp_emitter.STR(32, INDEX_UNSIGNED, to_store, X28, MJitStateExtReg(reg));
+    } else {
+        ARM64Reg to_store = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
+        code.STR(INDEX_UNSIGNED, to_store, X28, MJitStateExtReg(reg));
+    }
+}
+
+void A32EmitA64::EmitA32SetExtendedRegister64(A32EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    A32::ExtReg reg = inst->GetArg(0).GetA32ExtRegRef();
+    ASSERT(A32::IsDoubleExtReg(reg));
+    if (args[1].IsInFpr()) {
+        ARM64Reg to_store = ctx.reg_alloc.UseFpr(args[1]);
+        code.fp_emitter.STR(64, INDEX_UNSIGNED, to_store, X28, MJitStateExtReg(reg));
+    }
+    else {
+        ARM64Reg to_store = ctx.reg_alloc.UseGpr(args[1]);
+        code.STR(INDEX_UNSIGNED, to_store, X28, MJitStateExtReg(reg));
+    }
+}
 
 static u32 GetCpsrImpl(A32JitState* jit_state) {
     return jit_state->Cpsr();
@@ -620,24 +621,23 @@ void A32EmitA64::EmitA32OrQFlag(A32EmitContext& ctx, IR::Inst* inst) {
     }
 }
 
-//void A32EmitA64::EmitA32GetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
-//    Xbyak::Xmm result = ctx.reg_alloc.ScratchXmm();
-//    code.movd(result, dword[r15 + offsetof(A32JitState, CPSR_ge)]);
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
-//
-//void A32EmitA64::EmitA32SetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//    ASSERT(!args[0].IsImmediate());
-//
-//    if (args[0].IsInXmm()) {
-//        Xbyak::Xmm to_store = ctx.reg_alloc.UseXmm(args[0]);
-//        code.movd(dword[r15 + offsetof(A32JitState, CPSR_ge)], to_store);
-//    } else {
-//        Xbyak::Reg32 to_store = ctx.reg_alloc.UseGpr(args[0]).cvt32();
-//        code.mov(dword[r15 + offsetof(A32JitState, CPSR_ge)], to_store);
-//    }
-//}
+void A32EmitA64::EmitA32GetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
+    ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.ScratchFpr());
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_ge));
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void A32EmitA64::EmitA32SetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ASSERT(!args[0].IsImmediate());
+    ARM64Reg to_store = INVALID_REG;
+    if (args[0].IsInFpr()) {
+        to_store = EncodeRegToSingle(ctx.reg_alloc.UseFpr(args[0]));
+    } else {
+        to_store = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    }
+    code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, CPSR_ge));
+}
 
 void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -1314,6 +1314,9 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDesc
     code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, MJitStateReg(A32::Reg::PC));
     PushRSBHelper(X1, X2, terminal.next);
     code.ForceReturnFromRunCode();
+
+    //Todo: find a better/generic place to FlushIcache when switching between
+    //      far code and near code
     code.FlushIcache();
     code.SwitchToNearCode();
 }
