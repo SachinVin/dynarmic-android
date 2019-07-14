@@ -226,13 +226,19 @@ void BlockOfCode::GenRunCode() {
 void BlockOfCode::SwitchMxcsrOnEntry() {
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPCR);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_save_host_FPCR);
+    
     LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPCR);
     _MSR(Arm64Gen::FIELD_FPCR, ABI_SCRATCH1);
+    LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPSR);
+    _MSR(Arm64Gen::FIELD_FPSR, ABI_SCRATCH1);    
 }
 
 void BlockOfCode::SwitchMxcsrOnExit() {
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPCR);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPCR);
+    MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPSR);
+    STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPSR);
+
     LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_save_host_FPCR);
     _MSR(Arm64Gen::FIELD_FPCR, ABI_SCRATCH1);
 }
