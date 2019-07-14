@@ -12,15 +12,15 @@
 //INST(vfp_VDIV,             "VDIV",                    "cccc11101D00nnnndddd101zN0M0mmmm") // VFPv2
 
 // Floating-point move instructions
-//INST(vfp_VMOV_u32_f64,     "VMOV (core to f64)",      "cccc11100000ddddtttt1011D0010000") // VFPv2
-//INST(vfp_VMOV_f64_u32,     "VMOV (f64 to core)",      "cccc11100001nnnntttt1011N0010000") // VFPv2
-//INST(vfp_VMOV_u32_f32,     "VMOV (core to f32)",      "cccc11100000nnnntttt1010N0010000") // VFPv2
-//INST(vfp_VMOV_f32_u32,     "VMOV (f32 to core)",      "cccc11100001nnnntttt1010N0010000") // VFPv2
-//INST(vfp_VMOV_2u32_2f32,   "VMOV (2xcore to 2xf32)",  "cccc11000100uuuutttt101000M1mmmm") // VFPv2
-//INST(vfp_VMOV_2f32_2u32,   "VMOV (2xf32 to 2xcore)",  "cccc11000101uuuutttt101000M1mmmm") // VFPv2
-//INST(vfp_VMOV_2u32_f64,    "VMOV (2xcore to f64)",    "cccc11000100uuuutttt101100M1mmmm") // VFPv2
-//INST(vfp_VMOV_f64_2u32,    "VMOV (f64 to 2xcore)",    "cccc11000101uuuutttt101100M1mmmm") // VFPv2
-//INST(vfp_VMOV_reg,         "VMOV (reg)",              "cccc11101D110000dddd101z01M0mmmm") // VFPv2
+INST(vfp_VMOV_u32_f64,     "VMOV (core to f64)",      "cccc11100000ddddtttt1011D0010000") // VFPv2
+INST(vfp_VMOV_f64_u32,     "VMOV (f64 to core)",      "cccc11100001nnnntttt1011N0010000") // VFPv2
+INST(vfp_VMOV_u32_f32,     "VMOV (core to f32)",      "cccc11100000nnnntttt1010N0010000") // VFPv2
+INST(vfp_VMOV_f32_u32,     "VMOV (f32 to core)",      "cccc11100001nnnntttt1010N0010000") // VFPv2
+INST(vfp_VMOV_2u32_2f32,   "VMOV (2xcore to 2xf32)",  "cccc11000100uuuutttt101000M1mmmm") // VFPv2
+INST(vfp_VMOV_2f32_2u32,   "VMOV (2xf32 to 2xcore)",  "cccc11000101uuuutttt101000M1mmmm") // VFPv2
+INST(vfp_VMOV_2u32_f64,    "VMOV (2xcore to f64)",    "cccc11000100uuuutttt101100M1mmmm") // VFPv2
+INST(vfp_VMOV_f64_2u32,    "VMOV (f64 to 2xcore)",    "cccc11000101uuuutttt101100M1mmmm") // VFPv2
+INST(vfp_VMOV_reg,         "VMOV (reg)",              "cccc11101D110000dddd101z01M0mmmm") // VFPv2
 
 // Floating-point other instructions
 //INST(vfp_VABS,             "VABS",                    "cccc11101D110000dddd101z11M0mmmm") // VFPv2
