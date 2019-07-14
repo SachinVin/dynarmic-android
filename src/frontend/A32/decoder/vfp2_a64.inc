@@ -1,15 +1,15 @@
 // cccc1110________----101-__-0----
 
 // Floating-point three-register data processing instructions
-//INST(vfp_VMLA,             "VMLA",                    "cccc11100D00nnnndddd101zN0M0mmmm") // VFPv2
-//INST(vfp_VMLS,             "VMLS",                    "cccc11100D00nnnndddd101zN1M0mmmm") // VFPv2
-//INST(vfp_VNMLS,            "VNMLS",                   "cccc11100D01nnnndddd101zN0M0mmmm") // VFPv2
-//INST(vfp_VNMLA,            "VNMLA",                   "cccc11100D01nnnndddd101zN1M0mmmm") // VFPv2
-//INST(vfp_VMUL,             "VMUL",                    "cccc11100D10nnnndddd101zN0M0mmmm") // VFPv2
-//INST(vfp_VNMUL,            "VNMUL",                   "cccc11100D10nnnndddd101zN1M0mmmm") // VFPv2
-//INST(vfp_VADD,             "VADD",                    "cccc11100D11nnnndddd101zN0M0mmmm") // VFPv2
-//INST(vfp_VSUB,             "VSUB",                    "cccc11100D11nnnndddd101zN1M0mmmm") // VFPv2
-//INST(vfp_VDIV,             "VDIV",                    "cccc11101D00nnnndddd101zN0M0mmmm") // VFPv2
+INST(vfp_VMLA,             "VMLA",                    "cccc11100D00nnnndddd101zN0M0mmmm") // VFPv2
+INST(vfp_VMLS,             "VMLS",                    "cccc11100D00nnnndddd101zN1M0mmmm") // VFPv2
+INST(vfp_VNMLS,            "VNMLS",                   "cccc11100D01nnnndddd101zN0M0mmmm") // VFPv2
+INST(vfp_VNMLA,            "VNMLA",                   "cccc11100D01nnnndddd101zN1M0mmmm") // VFPv2
+INST(vfp_VMUL,             "VMUL",                    "cccc11100D10nnnndddd101zN0M0mmmm") // VFPv2
+INST(vfp_VNMUL,            "VNMUL",                   "cccc11100D10nnnndddd101zN1M0mmmm") // VFPv2
+INST(vfp_VADD,             "VADD",                    "cccc11100D11nnnndddd101zN0M0mmmm") // VFPv2
+INST(vfp_VSUB,             "VSUB",                    "cccc11100D11nnnndddd101zN1M0mmmm") // VFPv2
+INST(vfp_VDIV,             "VDIV",                    "cccc11101D00nnnndddd101zN0M0mmmm") // VFPv2
 
 // Floating-point move instructions
 INST(vfp_VMOV_u32_f64,     "VMOV (core to f64)",      "cccc11100000ddddtttt1011D0010000") // VFPv2
