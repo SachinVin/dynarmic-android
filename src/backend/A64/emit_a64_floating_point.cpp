@@ -297,4 +297,262 @@ void FPThreeOp(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, Function fn)
     ctx.reg_alloc.DefineValue(inst, result);
 }
 } // anonymous namespace
+
+void EmitA64::EmitFPHalfToDouble(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
+
+    code.fp_emitter.FCVT(64, 16, result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPHalfToSingle(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
+    code.fp_emitter.FCVT(32, 16, result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPSingleToDouble(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
+
+    code.fp_emitter.FCVT(64, 32, result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPSingleToHalf(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
+    code.fp_emitter.FCVT(16, 32, result, result);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPDoubleToHalf(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    code.fp_emitter.FCVT(16, 64, result, result);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPDoubleToSingle(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    code.fp_emitter.FCVT(32, 64, result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+template<size_t fsize, bool unsigned_, size_t isize>
+static void EmitFPToFixed(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const size_t fbits = args[1].GetImmediateU8();
+    const auto rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    const auto round_imm = ConvertRoundingModeToA64RoundingMode(rounding_mode);
+
+    ASSERT_MSG(fbits == 0, "fixed point conversions are not supported yet");
+
+    ARM64Reg src = ctx.reg_alloc.UseScratchFpr(args[0]);
+    ARM64Reg result = ctx.reg_alloc.ScratchGpr();
+    src = fsize == 64 ? EncodeRegToDouble(src) : EncodeRegToSingle(src);
+    result = isize == 64 ? result : DecodeReg(result);
+
+    if constexpr (unsigned_) {
+        code.fp_emitter.FCVTU(result, src, round_imm);
+    }
+    else {
+        code.fp_emitter.FCVTS(result, src, round_imm);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+
+}
+
+void EmitA64::EmitFPDoubleToFixedS32(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<64, false, 32>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPDoubleToFixedS64(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<64, false, 64>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPDoubleToFixedU32(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<64, true, 32>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPDoubleToFixedU64(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<64, true, 64>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPSingleToFixedS32(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<32, false, 32>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPSingleToFixedS64(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<32, false, 64>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPSingleToFixedU32(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<32, true, 32>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPSingleToFixedU64(EmitContext& ctx, IR::Inst* inst) {
+    EmitFPToFixed<32, true, 64>(code, ctx, inst);
+}
+
+void EmitA64::EmitFPFixedS32ToSingle(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg from = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.SCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.SCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedU32ToSingle(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    
+    const ARM64Reg from = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.UCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.UCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedS32ToDouble(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg from = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.SCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.SCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedS64ToDouble(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg from = ctx.reg_alloc.UseGpr(args[0]);
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.SCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.SCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedS64ToSingle(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg from = ctx.reg_alloc.UseGpr(args[0]);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.SCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.SCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedU32ToDouble(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg from = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.UCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.UCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedU64ToDouble(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+
+    const ARM64Reg from = ctx.reg_alloc.UseGpr(args[0]);
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.UCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.UCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPFixedU64ToSingle(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+
+    const ARM64Reg from = ctx.reg_alloc.UseGpr(args[0]);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.ScratchFpr());
+    const size_t fbits = args[1].GetImmediateU8();
+    const FP::RoundingMode rounding_mode = static_cast<FP::RoundingMode>(args[2].GetImmediateU8());
+    ASSERT(rounding_mode == ctx.FPSCR_RMode());
+
+    if (fbits != 0) {
+        code.fp_emitter.UCVTF(result, from, fbits);
+    }
+    else {
+        code.fp_emitter.UCVTF(result, from);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 } // namespace Dynarmic::BackendX64
