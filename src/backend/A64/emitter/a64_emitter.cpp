@@ -1140,7 +1140,7 @@ void ARM64XEmitter::MRS(ARM64Reg Rt, PStateField field) {
     EncodeSystemInst(o0 | 4, op1, CRn, CRm, op2, DecodeReg(Rt));
 }
 
-void ARM64XEmitter::CNTVCT(Arm64Gen::ARM64Reg Rt) {
+void ARM64XEmitter::CNTVCT(ARM64Reg Rt) {
     ASSERT_MSG(Is64Bit(Rt), "CNTVCT: Rt must be 64-bit");
 
     // MRS <Xt>, CNTVCT_EL0 ; Read CNTVCT_EL0 into Xt
@@ -1868,8 +1868,8 @@ void ARM64XEmitter::ABI_PushRegisters(u32 registers) {
     } else {
         STP(INDEX_PRE, gpr[0], gpr[1], SP, -stack_size);
         it += 2;
-    }
-
+    }    
+	
     // Fast store for all other registers, this is always an even number.
     for (int i = 0; i < (num_regs - 1) / 2; i++) {
         STP(INDEX_SIGNED, gpr[it], gpr[it + 1], SP, 16 * (i + 1));
@@ -2677,19 +2677,29 @@ void ARM64FloatEmitter::FMOV(ARM64Reg Rd, ARM64Reg Rn, bool top) {
         ASSERT_MSG(!IsQuad(Rd) && !IsQuad(Rn), "FMOV can't move to/from quads");
         int rmode = 0;
         int opcode = 6;
+        int encoded_size = 0;
         int sf = 0;
         if (IsSingle(Rd) && !Is64Bit(Rn) && !top) {
             // GPR to scalar single
             opcode |= 1;
         } else if (!Is64Bit(Rd) && IsSingle(Rn) && !top) {
             // Scalar single to GPR - defaults are correct
+        } else if (Is64Bit(Rd) && IsDouble(Rn) && !top) {
+            // Scalar double to GPR
+            sf = 1;
+            encoded_size = 1;
+        } else if (IsDouble(Rd) && Is64Bit(Rn) && !top) {
+            // GPR to Scalar double
+            sf = 1;
+            encoded_size = 1;
+            opcode |= 1;
         } else {
             // TODO
             ASSERT_MSG(0, "FMOV: Unhandled case");
         }
         Rd = DecodeReg(Rd);
         Rn = DecodeReg(Rn);
-        Write32((sf << 31) | (0x1e2 << 20) | (rmode << 19) | (opcode << 16) | (Rn << 5) | Rd);
+        Write32((sf << 31) | (encoded_size << 22) | (0x1e2 << 20)  | (rmode << 19) | (opcode << 16) | (Rn << 5) | Rd);
     }
 }
 
