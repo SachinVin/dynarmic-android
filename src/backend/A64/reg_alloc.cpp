@@ -486,20 +486,19 @@ HostLoc RegAlloc::LoadImmediate(IR::Value imm, HostLoc host_loc) {
         Arm64Gen::ARM64Reg reg = HostLocToReg64(host_loc);
         u64 imm_value = ImmediateToU64(imm);
         if (imm_value == 0)
-            code.MOV(DecodeReg(reg), Arm64Gen::WZR);
+            code.MOV(reg, Arm64Gen::ZR);
         else
             code.MOVI2R(reg, imm_value);
         return host_loc;
     }
 
     if (HostLocIsFPR(host_loc)) {
-        Arm64Gen::ARM64Reg reg = HostLocToFpr(host_loc);
+        Arm64Gen::ARM64Reg reg = Arm64Gen::EncodeRegToDouble(HostLocToFpr(host_loc));
         u64 imm_value = ImmediateToU64(imm);
         if (imm_value == 0)
-            code.fp_emitter.FMOV(reg, Arm64Gen::WZR);
+            code.fp_emitter.FMOV(reg, 0);
         else {
-            code.MOVP2R(code.ABI_SCRATCH1, code.MConst(imm_value));
-            code.fp_emitter.LDR(128, Arm64Gen::INDEX_UNSIGNED, reg, code.ABI_SCRATCH1, 0);
+            code.LDR(reg, code.MConst(imm_value));
         }
         return host_loc;
     }
@@ -600,16 +599,16 @@ void RegAlloc::EmitMove(size_t bit_width, HostLoc to, HostLoc from) {
     } else if (HostLocIsFPR(to) && HostLocIsGPR(from)) {
         ASSERT(bit_width != 128);
         if (bit_width == 64) {
-            code.fp_emitter.FMOV(HostLocToFpr(to), HostLocToReg64(from));
+            code.fp_emitter.FMOV(EncodeRegToDouble(HostLocToFpr(to)), HostLocToReg64(from));
         } else {
-            code.fp_emitter.FMOV(HostLocToFpr(to), DecodeReg(HostLocToReg64(from)));
+            code.fp_emitter.FMOV(EncodeRegToSingle(HostLocToFpr(to)), DecodeReg(HostLocToReg64(from)));
         }
     } else if (HostLocIsGPR(to) && HostLocIsFPR(from)) {
         ASSERT(bit_width != 128);
         if (bit_width == 64) {
-            code.fp_emitter.FMOV(HostLocToReg64(to), HostLocToFpr(from));
+            code.fp_emitter.FMOV(HostLocToReg64(to), EncodeRegToDouble(HostLocToFpr(from)));
         } else {
-            code.fp_emitter.FMOV(DecodeReg(HostLocToReg64(to)), HostLocToFpr(from));
+            code.fp_emitter.FMOV(DecodeReg(HostLocToReg64(to)), EncodeRegToSingle(HostLocToFpr(from)));
         }
     } else if (HostLocIsFPR(to) && HostLocIsSpill(from)) {
         s32 spill_addr = spill_to_addr(from);
@@ -618,7 +617,7 @@ void RegAlloc::EmitMove(size_t bit_width, HostLoc to, HostLoc from) {
     } else if (HostLocIsSpill(to) && HostLocIsFPR(from)) {
         s32 spill_addr = spill_to_addr(to);
         // ASSERT(spill_addr.getBit() >= bit_width);
-        code.fp_emitter.STR(bit_width, Arm64Gen::INDEX_UNSIGNED, HostLocToFpr(to), Arm64Gen::X28, spill_addr);
+        code.fp_emitter.STR(bit_width, Arm64Gen::INDEX_UNSIGNED, HostLocToFpr(from), Arm64Gen::X28, spill_addr);
     } else if (HostLocIsGPR(to) && HostLocIsSpill(from)) {
         ASSERT(bit_width != 128);
         if (bit_width == 64) {
