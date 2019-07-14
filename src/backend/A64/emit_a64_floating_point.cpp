@@ -352,12 +352,43 @@ void EmitA64::EmitFPNeg64(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
+void EmitA64::EmitFPAdd32(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<32, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FADD);
+}
+
+void EmitA64::EmitFPAdd64(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<64, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FADD);
+}
+
+void EmitA64::EmitFPDiv32(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<32, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FDIV);
+}
+
+void EmitA64::EmitFPDiv64(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<64, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FDIV);
+}
+
+void EmitA64::EmitFPMul32(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<32, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FMUL);
+}
+
+void EmitA64::EmitFPMul64(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<64, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FMUL);
+}
 void EmitA64::EmitFPSqrt32(EmitContext& ctx, IR::Inst* inst) {
     FPTwoOp<32>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FSQRT);
 }
 
 void EmitA64::EmitFPSqrt64(EmitContext& ctx, IR::Inst* inst) {
     FPTwoOp<64>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FSQRT);
+}
+
+void EmitA64::EmitFPSub32(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<32, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FSUB);
+}
+
+void EmitA64::EmitFPSub64(EmitContext& ctx, IR::Inst* inst) {
+    FPThreeOp<64, void(Arm64Gen::ARM64FloatEmitter::*)(ARM64Reg, ARM64Reg, ARM64Reg)>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FSUB);
 }
 
 static ARM64Reg SetFpscrNzcvFromFlags(BlockOfCode& code, EmitContext& ctx) {
