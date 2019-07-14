@@ -146,20 +146,17 @@ void A32JitState::SetFpscr(u32 FPSCR) {
     FPSCR_mode = FPSCR & FPSCR_MODE_MASK;
     FPSCR_nzcv = FPSCR & FPSCR_NZCV_MASK;
     guest_FPCR = 0;
-
-    // RMode
-    guest_FPCR |= FPSCR & 0xC00000;
-
+    guest_FPSR = 0;
     // Cumulative flags IDC, IOC, IXC, UFC, OFC, DZC
     FPSCR_IDC = 0;
     FPSCR_UFC = 0;
     fpsr_exc = FPSCR & 0x9F;
 
-    if (Common::Bit<24>(FPSCR)) {
-        // VFP Flush to Zero
-        //guest_MXCSR |= (1 << 15); // SSE Flush to Zero
-        //guest_MXCSR |= (1 << 6);  // SSE Denormals are Zero
-    }
+    // Mode Bits
+    guest_FPCR |= FPSCR & 0x07C09F00;
+
+    // Exceptions
+    guest_FPSR |= FPSCR & 0x9F;
 }
 
 u64 A32JitState::GetUniqueHash() const {
