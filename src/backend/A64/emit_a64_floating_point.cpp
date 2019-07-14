@@ -298,6 +298,107 @@ void FPThreeOp(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, Function fn)
 }
 } // anonymous namespace
 
+//void EmitA64::EmitFPAbs16(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    const ARM64Reg result = ctx.reg_alloc.UseScratchXmm(args[0]);
+//
+//    code.pand(result, code.MConst(xword, f16_non_sign_mask));
+//
+//    ctx.reg_alloc.DefineValue(inst, result);
+//}
+
+void EmitA64::EmitFPAbs32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
+
+    code.fp_emitter.FABS(result, result);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPAbs64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+
+    code.fp_emitter.FABS(result, result);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+//void EmitA64::EmitFPNeg16(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    const ARM64Reg result = ctx.reg_alloc.UseScratchXmm(args[0]);
+//
+//    code.pxor(result, code.MConst(xword, f16_negative_zero));
+//
+//    ctx.reg_alloc.DefineValue(inst, result);
+//}
+
+void EmitA64::EmitFPNeg32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
+
+    code.fp_emitter.FNEG(result, result);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPNeg64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+
+    code.fp_emitter.FNEG(result, result);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitFPSqrt32(EmitContext& ctx, IR::Inst* inst) {
+    FPTwoOp<32>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FSQRT);
+}
+
+void EmitA64::EmitFPSqrt64(EmitContext& ctx, IR::Inst* inst) {
+    FPTwoOp<64>(code, ctx, inst, &Arm64Gen::ARM64FloatEmitter::FSQRT);
+}
+
+static ARM64Reg SetFpscrNzcvFromFlags(BlockOfCode& code, EmitContext& ctx) {
+    ARM64Reg nzcv = ctx.reg_alloc.ScratchGpr();
+    // Fpsr's nzcv is copied across integer nzcv 
+    code.MRS(nzcv, FIELD_NZCV);
+    return nzcv;
+}
+
+void EmitA64::EmitFPCompare32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg reg_a = EncodeRegToSingle(ctx.reg_alloc.UseFpr(args[0]));
+    ARM64Reg reg_b = EncodeRegToSingle(ctx.reg_alloc.UseFpr(args[1]));
+    bool exc_on_qnan = args[2].GetImmediateU1();
+
+    if (exc_on_qnan) {
+        code.fp_emitter.FCMPE(reg_a, reg_b);
+    } else {
+        code.fp_emitter.FCMP(reg_a, reg_b);
+    }
+
+    ARM64Reg nzcv = SetFpscrNzcvFromFlags(code, ctx);
+    ctx.reg_alloc.DefineValue(inst, nzcv);
+}
+
+void EmitA64::EmitFPCompare64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg reg_a = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[0]));
+    const ARM64Reg reg_b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+    bool exc_on_qnan = args[2].GetImmediateU1();
+
+    if (exc_on_qnan) {
+        code.fp_emitter.FCMPE(reg_a, reg_b);
+    } else {
+        code.fp_emitter.FCMP(reg_a, reg_b);
+    }
+
+    ARM64Reg nzcv = SetFpscrNzcvFromFlags(code, ctx);
+    ctx.reg_alloc.DefineValue(inst, nzcv);
+}
+
 void EmitA64::EmitFPHalfToDouble(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     const ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.UseScratchFpr(args[0]));
