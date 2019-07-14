@@ -26,10 +26,10 @@
 //INST(vfp_VABS,             "VABS",                    "cccc11101D110000dddd101z11M0mmmm") // VFPv2
 //INST(vfp_VNEG,             "VNEG",                    "cccc11101D110001dddd101z01M0mmmm") // VFPv2
 //INST(vfp_VSQRT,            "VSQRT",                   "cccc11101D110001dddd101z11M0mmmm") // VFPv2
-//INST(vfp_VCVT_f_to_f,      "VCVT (f32<->f64)",        "cccc11101D110111dddd101z11M0mmmm") // VFPv2
-//INST(vfp_VCVT_to_float,    "VCVT (to float)",         "cccc11101D111000dddd101zs1M0mmmm") // VFPv2
-//INST(vfp_VCVT_to_u32,      "VCVT (to u32)",           "cccc11101D111100dddd101zr1M0mmmm") // VFPv2
-//INST(vfp_VCVT_to_s32,      "VCVT (to s32)",           "cccc11101D111101dddd101zr1M0mmmm") // VFPv2
+INST(vfp_VCVT_f_to_f,      "VCVT (f32<->f64)",        "cccc11101D110111dddd101z11M0mmmm") // VFPv2
+INST(vfp_VCVT_to_float,    "VCVT (to float)",         "cccc11101D111000dddd101zs1M0mmmm") // VFPv2
+INST(vfp_VCVT_to_u32,      "VCVT (to u32)",           "cccc11101D111100dddd101zr1M0mmmm") // VFPv2
+INST(vfp_VCVT_to_s32,      "VCVT (to s32)",           "cccc11101D111101dddd101zr1M0mmmm") // VFPv2
 //INST(vfp_VCMP,             "VCMP",                    "cccc11101D110100dddd101zE1M0mmmm") // VFPv2
 //INST(vfp_VCMP_zero,        "VCMP (with zero)",        "cccc11101D110101dddd101zE1000000") // VFPv2
 
