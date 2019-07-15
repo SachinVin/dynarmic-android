@@ -475,7 +475,7 @@ private:
     void EncodeData2SrcInst(u32 instenc, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void EncodeData3SrcInst(u32 instenc, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm, ARM64Reg Ra);
     void EncodeLogicalInst(u32 instenc, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm, ArithOption Shift);
-    void EncodeLoadRegisterInst(u32 bitop, ARM64Reg Rt, u32 imm);
+    void EncodeLoadRegisterInst(u32 bitop, ARM64Reg Rt, s32 imm);
     void EncodeLoadStoreExcInst(u32 instenc, ARM64Reg Rs, ARM64Reg Rt2, ARM64Reg Rn, ARM64Reg Rt);
     void EncodeLoadStorePairedInst(u32 op, ARM64Reg Rt, ARM64Reg Rt2, ARM64Reg Rn, u32 imm);
     void EncodeLoadStoreIndexedInst(u32 op, u32 op2, ARM64Reg Rt, ARM64Reg Rn, s32 imm);
@@ -744,9 +744,9 @@ public:
     }
 
     // Load Register (Literal)
-    void LDR(ARM64Reg Rt, u32 imm);
-    void LDRSW(ARM64Reg Rt, u32 imm);
-    void PRFM(ARM64Reg Rt, u32 imm);
+    void LDR(ARM64Reg Rt, s32 imm);
+    void LDRSW(ARM64Reg Rt, s32 imm);
+    void PRFM(ARM64Reg Rt, s32 imm);
 
     // Load/Store Exclusive
     void STXRB(ARM64Reg Rs, ARM64Reg Rt, ARM64Reg Rn);
