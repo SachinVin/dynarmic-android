@@ -667,16 +667,16 @@ void ARM64XEmitter::EncodeLogicalInst(u32 instenc, ARM64Reg Rd, ARM64Reg Rn, ARM
             (LogicalEnc[instenc][1] << 21) | Shift.GetData() | (Rm << 16) | (Rn << 5) | Rd);
 }
 
-void ARM64XEmitter::EncodeLoadRegisterInst(u32 bitop, ARM64Reg Rt, u32 imm) {
+void ARM64XEmitter::EncodeLoadRegisterInst(u32 bitop, ARM64Reg Rt, s32 imm) {
     bool b64Bit = Is64Bit(Rt);
     bool bVec = IsVector(Rt);
 
-    ASSERT_MSG(!(imm & 0xFFFFF), "%s: offset too large %d", __func__, imm);
+    ASSERT_MSG(IsInRangeImm19(imm), "{}: offset too large {}", __func__, imm);
 
     Rt = DecodeReg(Rt);
     if (b64Bit && bitop != 0x2) // LDRSW(0x2) uses 64bit reg, doesn't have 64bit bit set
         bitop |= 0x1;
-    Write32((bitop << 30) | (bVec << 26) | (0x18 << 24) | (imm << 5) | Rt);
+    Write32((bitop << 30) | (bVec << 26) | (0x18 << 24) | (MaskImm19(imm) << 5) | Rt);
 }
 
 void ARM64XEmitter::EncodeLoadStoreExcInst(u32 instenc, ARM64Reg Rs, ARM64Reg Rt2, ARM64Reg Rn,
@@ -1510,13 +1510,13 @@ void ARM64XEmitter::UXTH(ARM64Reg Rd, ARM64Reg Rn) {
 }
 
 // Load Register (Literal)
-void ARM64XEmitter::LDR(ARM64Reg Rt, u32 imm) {
+void ARM64XEmitter::LDR(ARM64Reg Rt, s32 imm) {
     EncodeLoadRegisterInst(0, Rt, imm);
 }
-void ARM64XEmitter::LDRSW(ARM64Reg Rt, u32 imm) {
+void ARM64XEmitter::LDRSW(ARM64Reg Rt, s32 imm) {
     EncodeLoadRegisterInst(2, Rt, imm);
 }
-void ARM64XEmitter::PRFM(ARM64Reg Rt, u32 imm) {
+void ARM64XEmitter::PRFM(ARM64Reg Rt, s32 imm) {
     EncodeLoadRegisterInst(3, Rt, imm);
 }
 
