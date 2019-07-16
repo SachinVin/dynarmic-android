@@ -498,7 +498,7 @@ HostLoc RegAlloc::LoadImmediate(IR::Value imm, HostLoc host_loc) {
         if (imm_value == 0)
             code.fp_emitter.FMOV(reg, 0);
         else {
-            code.LDR(reg, code.MConst(imm_value));
+            code.EmitPatchLDR(reg, imm_value);
         }
         return host_loc;
     }
