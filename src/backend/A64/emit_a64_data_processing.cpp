@@ -191,4 +191,530 @@ void EmitA64::EmitConditionalSelect64(EmitContext& ctx, IR::Inst* inst) {
 void EmitA64::EmitConditionalSelectNZCV(EmitContext& ctx, IR::Inst* inst) {
     EmitConditionalSelect(code, ctx, inst, 32);
 }
+
+void EmitA64::EmitLogicalShiftLeft32(EmitContext& ctx, IR::Inst* inst) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+    auto& carry_arg = args[2];
+
+    if (!carry_inst) {
+        if (shift_arg.IsImmediate()) {
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            u8 shift = shift_arg.GetImmediateU8();
+
+            if (shift <= 31) {
+                code.LSL(result, result, shift);
+            } else {
+                code.MOV(result, WZR);
+            }
+
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.Use(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+
+            code.ANDI2R(shift, shift, 0xFF);
+            code.LSLV(result, result, shift);            
+            code.CMPI2R(shift, 32);
+            code.CSEL(result, WZR, DecodeReg(result), CC_GE);
+            ctx.reg_alloc.DefineValue(inst, DecodeReg(result));
+        }
+    } else {
+        if (shift_arg.IsImmediate()) {
+            u8 shift = shift_arg.GetImmediateU8();
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            if (shift == 0) {
+                // There is nothing more to do.
+            } else if (shift < 32) {
+                code.LSL(carry, result, shift - 1);
+                code.LSR(carry, carry, 31);
+                code.LSL(result, result, shift);
+            } else if (shift > 32) {
+                code.MOV(result, WZR);
+                code.MOV(carry, WZR);
+            } else {
+                code.ANDI2R(carry, result, 1);
+                code.MOV(result, WZR);                
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.Use(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            // TODO: Optimize this.
+            // TODO: Use CSEL instead?
+            FixupBranch Rs_gt32, Rs_eq32;
+            std::vector<FixupBranch> end;
+
+            code.ANDI2R(shift, shift, 0xFF);
+            code.CMP(shift, WZR);
+            // if (Rs & 0xFF == 0) {
+            end.push_back(code.B(CC_EQ));
+            // }
+            code.CMPI2R(shift, 32);
+            Rs_gt32 = code.B(CC_GT);
+            Rs_eq32 = code.B(CC_EQ);
+            // } else if (Rs & 0xFF < 32) {
+            code.SUBI2R(shift, shift, 1); // Subtract 1 to get the bit that is shiftedout, into the MSB.
+            code.LSLV(result, result, shift);
+            code.UBFX(carry, result, 31, 1);
+            code.LSL(result, result, 1);
+            end.push_back(code.B());
+            // } else if (Rs & 0xFF > 32) {
+            code.SetJumpTarget(Rs_gt32);
+            code.MOV(result, WZR);
+            code.MOV(carry, WZR);
+            end.push_back(code.B());
+            // } else if (Rs & 0xFF == 32) {
+            code.SetJumpTarget(Rs_eq32);
+            code.ANDI2R(carry, result, 1);
+            code.MOV(result, WZR);            
+            // }
+
+            for (FixupBranch e : end) {
+                code.SetJumpTarget(e);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    }
+}
+
+//void EmitA64::EmitLogicalShiftLeft64(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    auto& operand_arg = args[0];
+//    auto& shift_arg = args[1];
+//
+//    if (shift_arg.IsImmediate()) {
+//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+//        u8 shift = shift_arg.GetImmediateU8();
+//
+//        if (shift < 64) {
+//            code.shl(result, shift);
+//        } else {
+//            code.xor_(result.cvt32(), result.cvt32());
+//        }
+//
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    } else {
+//        ctx.reg_alloc.Use(shift_arg, HostLoc::RCX);
+//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+//        Xbyak::Reg64 zero = ctx.reg_alloc.ScratchGpr();
+//
+//        // The x64 SHL instruction masks the shift count by 0x1F before performing the shift.
+//        // ARM differs from the behaviour: It does not mask the count, so shifts above 31 result in zeros.
+//
+//        code.shl(result, code.cl);
+//        code.xor_(zero.cvt32(), zero.cvt32());
+//        code.cmp(code.cl, 64);
+//        code.cmovnb(result, zero);
+//
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    }
+//}
+
+void EmitA64::EmitLogicalShiftRight32(EmitContext& ctx, IR::Inst* inst) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+    auto& carry_arg = args[2];
+
+    if (!carry_inst) {
+        if (shift_arg.IsImmediate()) {
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            u8 shift = shift_arg.GetImmediateU8();
+
+            if (shift <= 31) {
+                code.LSR(result,result, shift);
+            } else {
+                code.MOVI2R(result, 0);
+            }
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.Use(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+
+            // The 32-bit x64 SHR instruction masks the shift count by 0x1F before performing the shift.
+            // ARM differs from the behaviour: It does not mask the count, so shifts above 31 result in zeros.
+
+            code.ANDI2R(shift, shift, 0xFF);
+            code.LSRV(result, result, shift);
+            code.CMPI2R(shift, 31);
+            code.CSEL(result, WZR, result, CC_GT);
+
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    } else {
+        if (shift_arg.IsImmediate()) {
+            u8 shift = shift_arg.GetImmediateU8();
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            if (shift == 0) {
+                // There is nothing more to do.
+            } else if (shift < 32) {
+                code.LSR(carry, result, shift - 1);
+                code.ANDI2R(carry, carry, 1);
+                code.LSR(result,result, shift);
+            } else if (shift == 32) {
+                code.LSR(carry, result, 31);
+                code.ANDI2R(carry, carry, 1);
+                code.MOV(result, WZR);
+            } else {
+                code.MOV(result, WZR);
+                code.MOV(carry, WZR);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.Use(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            // TODO: Optimize this.
+            // TODO: Use CSEL instead?
+            FixupBranch Rs_gt32 , Rs_eq32;
+            std::vector<FixupBranch> end;
+
+            code.ANDI2R(shift, shift, 0xFF);
+            code.CMPI2R(shift, 32);
+            Rs_gt32 = code.B(CC_GT);
+            Rs_eq32 = code.B(CC_EQ);
+            // if (Rs & 0xFF == 0) goto end;
+            code.CMP(shift, WZR);
+            end.push_back(code.B(CC_EQ));
+            // if (Rs & 0xFF <= 32) {
+            code.SUBI2R(shift, shift, 1); // Subtract 1 to get the bit that is shifted out to the carry.
+            code.LSRV(result, result, shift);
+            code.ANDI2R(carry, result, 1);
+            code.LSR(result, result, 1);
+            end.push_back(code.B());
+            // else if (Rs & 0xFF == 32) {
+            code.SetJumpTarget(Rs_eq32);
+            code.LSR(carry, result, 31);
+            code.ANDI2R(carry, carry, 1);
+            code.MOV(result, WZR);
+            end.push_back(code.B());
+            // } else if (Rs & 0xFF > 32) {
+            code.SetJumpTarget(Rs_gt32);
+            code.MOV(result, WZR);
+            code.MOV(carry, WZR);
+            // }
+
+            for(FixupBranch e : end){
+                code.SetJumpTarget(e);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    }
+}
+
+void EmitA64::EmitLogicalShiftRight64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+
+    if (shift_arg.IsImmediate()) {
+        ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+        u8 shift = shift_arg.GetImmediateU8();
+
+        if (shift < 64) {
+            code.LSR(result, result, shift);
+        } else {
+            code.MOV(result, ZR);
+        }
+
+        ctx.reg_alloc.DefineValue(inst, result);
+    } else {
+        ARM64Reg shift = ctx.reg_alloc.UseScratchGpr(shift_arg);
+        ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+
+        code.ANDI2R(shift, shift, 0xFF);
+        code.LSRV(result, result, shift);
+        code.CMP(shift, 63);
+        code.CSEL(result, WZR, result, CC_GT);
+
+        ctx.reg_alloc.DefineValue(inst, result);
+    }
+}
+
+void EmitA64::EmitArithmeticShiftRight32(EmitContext& ctx, IR::Inst* inst) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+    auto& carry_arg = args[2];
+
+    if (!carry_inst) {
+        if (shift_arg.IsImmediate()) {
+            u8 shift = shift_arg.GetImmediateU8();
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+
+            code.ASR(result, result, u8(shift < 31 ? shift : 31));
+
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.UseScratch(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg const31 = DecodeReg(ctx.reg_alloc.ScratchGpr());
+
+            // The 32-bit arm64 SAR instruction masks the shift count by 0x1F before performing the shift.
+            // ARM differs from the behaviour: It does not mask the count.
+
+            // We note that all shift values above 31 have the same behaviour as 31 does, so we saturate `shift` to 31.
+            code.ANDI2R(shift, shift, 0xFF);
+            code.MOVI2R(const31, 31);
+            code.CMPI2R(shift, u32(31));
+            code.CSEL(shift, shift, const31, CC_LE);
+            code.ASRV(result, result, shift);
+
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    } else {
+        if (shift_arg.IsImmediate()) {
+            u8 shift = shift_arg.GetImmediateU8();
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            if (shift == 0) {
+                // There is nothing more to do.
+            } else if (shift <= 31) {
+                code.ASR(result, result, shift - 1);
+                code.ANDI2R(carry, result, 1);
+                code.ASR(result, result, 1);
+            } else {
+                code.ASR(result, result, 31);
+                code.ANDI2R(carry, result, 1);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.Use(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            // TODO: Optimize this.
+
+            std::vector<FixupBranch> end;
+            FixupBranch Rs_gt31;
+
+            code.ANDI2R(shift, shift, 0xFF);
+            code.CMPI2R(shift, u32(31));
+            Rs_gt31 = code.B(CC_GT);
+            // if (Rs & 0xFF == 0) goto end;
+            code.CMP(shift, WZR);
+            end.push_back(code.B(CC_EQ));
+            // if (Rs & 0xFF <= 31) {
+            code.SUBI2R(shift, shift, 1);
+            code.ASRV(result, result, shift);
+            code.ANDI2R(carry, result, 1);
+            code.ASR(result, result, 1);
+            end.push_back(code.B());
+            // } else if (Rs & 0xFF > 31) {
+            code.SetJumpTarget(Rs_gt31);
+            code.ASR(result, result, 31); // 31 produces the same results as anything above 31
+            code.ANDI2R(carry, result, 1); 
+            // }
+
+            for (FixupBranch e : end) {
+                code.SetJumpTarget(e);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    }
+}
+
+//void EmitA64::EmitArithmeticShiftRight64(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    auto& operand_arg = args[0];
+//    auto& shift_arg = args[1];
+//
+//    if (shift_arg.IsImmediate()) {
+//        u8 shift = shift_arg.GetImmediateU8();
+//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+//
+//        code.sar(result, u8(shift < 63 ? shift : 63));
+//
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    } else {
+//        ctx.reg_alloc.UseScratch(shift_arg, HostLoc::RCX);
+//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+//        Xbyak::Reg64 const63 = ctx.reg_alloc.ScratchGpr();
+//
+//        // The 64-bit x64 SAR instruction masks the shift count by 0x3F before performing the shift.
+//        // ARM differs from the behaviour: It does not mask the count.
+//
+//        // We note that all shift values above 63 have the same behaviour as 63 does, so we saturate `shift` to 63.
+//        code.mov(const63, 63);
+//        code.movzx(code.ecx, code.cl);
+//        code.cmp(code.ecx, u32(63));
+//        code.cmovg(code.ecx, const63);
+//        code.sar(result, code.cl);
+//
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    }
+//}
+
+void EmitA64::EmitRotateRight32(EmitContext& ctx, IR::Inst* inst) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+    auto& carry_arg = args[2];
+
+    if (!carry_inst) {
+        if (shift_arg.IsImmediate()) {
+            u8 shift = shift_arg.GetImmediateU8();
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+
+            code.ROR(result, result, u8(shift & 0x1F));
+
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            ctx.reg_alloc.Use(shift_arg, HostLoc::X0);
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+
+            // aarch64 ROR instruction does (shift & 0x1F) for us.
+            code.RORV(result, result, W0);
+
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    } else {
+        if (shift_arg.IsImmediate()) {
+            u8 shift = shift_arg.GetImmediateU8();
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            if (shift == 0) {
+                // There is nothing more to do.
+            } else if ((shift & 0x1F) == 0) {
+                code.MOV(carry, result, ArithOption{result, ST_LSR, 31});
+            } else {
+                code.ROR(result, result, (shift & 0x1F) - 1);
+                code.ANDI2R(carry, result, 1);
+                code.ROR(result, result, 1);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        } else {
+            //ctx.reg_alloc.UseScratch(shift_arg, HostLoc::X0) 
+            Arm64Gen::ARM64Reg shift = DecodeReg(ctx.reg_alloc.UseScratchGpr(shift_arg));
+            Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(operand_arg));
+            Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(carry_arg));
+
+            // TODO: Optimize
+
+            std::vector<FixupBranch> end; 
+            FixupBranch zero_1F;
+
+            code.ANDSI2R(shift, shift, u32(0xFF));
+            // if (Rs & 0xFF == 0) goto end;
+            code.CMP(shift, WZR);
+            end.push_back(code.B(CC_EQ));
+            code.ANDSI2R(shift, shift, u32(0x1F));
+            zero_1F = code.B(CC_EQ);
+            // if (Rs & 0x1F != 0) {
+            code.SUBI2R(shift, shift, 1);
+            code.RORV(result, result, shift);
+            code.ANDI2R(carry, result, 1);
+            code.ROR(result, result, 1);
+            end.push_back(code.B());
+            // } else {
+            code.SetJumpTarget(zero_1F);
+            code.MOV(carry, result, ArithOption{result, ST_LSR, 31});
+            // }
+
+            for (FixupBranch e : end) {
+                code.SetJumpTarget(e);
+            }
+
+            ctx.reg_alloc.DefineValue(carry_inst, carry);
+            ctx.EraseInstruction(carry_inst);
+            ctx.reg_alloc.DefineValue(inst, result);
+        }
+    }
+}
+
+//void EmitA64::EmitRotateRight64(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    auto& operand_arg = args[0];
+//    auto& shift_arg = args[1];
+//
+//    if (shift_arg.IsImmediate()) {
+//        u8 shift = shift_arg.GetImmediateU8();
+//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+//
+//        code.ror(result, u8(shift & 0x3F));
+//
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    } else {
+//        ctx.reg_alloc.Use(shift_arg, HostLoc::RCX);
+//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+//
+//        // x64 ROR instruction does (shift & 0x3F) for us.
+//        code.ror(result, code.cl);
+//
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    }
+//}
+
+void EmitA64::EmitRotateRightExtended(EmitContext& ctx, IR::Inst* inst) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    Arm64Gen::ARM64Reg carry = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[1]));
+    Arm64Gen::ARM64Reg temp = DecodeReg(ctx.reg_alloc.ScratchGpr());
+
+    if (carry_inst) {
+        code.MOV(temp, result);
+    }
+
+    // Set carry to the LSB and ROR
+    code.BFI(result, carry, 0, 1);
+    code.ROR(result, result, 1);    
+   
+    if (carry_inst) {
+        code.ANDI2R(carry, temp, 1);
+
+        ctx.reg_alloc.DefineValue(carry_inst, carry);
+        ctx.EraseInstruction(carry_inst);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 } // namespace Dynarmic::BackendA64
