@@ -717,4 +717,191 @@ void EmitA64::EmitRotateRightExtended(EmitContext& ctx, IR::Inst* inst) {
 
     ctx.reg_alloc.DefineValue(inst, result);
 }
+
+static Arm64Gen::ARM64Reg DoCarry(RegAlloc& reg_alloc, Argument& carry_in, IR::Inst* carry_out) {
+    if (carry_in.IsImmediate()) {
+        return carry_out ? reg_alloc.ScratchGpr() : INVALID_REG;
+    } else {
+        return carry_out ? reg_alloc.UseScratchGpr(carry_in) : reg_alloc.UseGpr(carry_in);
+    }
+}
+
+static Arm64Gen::ARM64Reg DoNZCV(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* nzcv_out) {
+    if (!nzcv_out)
+        return INVALID_REG;
+
+    Arm64Gen::ARM64Reg nzcv = reg_alloc.ScratchGpr();
+    code.MOVI2R(nzcv, 0);
+    return nzcv;
+}
+
+static void EmitAdd(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bitsize) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+    auto overflow_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetOverflowFromOp);
+    auto nzcv_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetNZCVFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& carry_in = args[2];
+
+    Arm64Gen::ARM64Reg nzcv = DoNZCV(code, ctx.reg_alloc, nzcv_inst);
+    Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    Arm64Gen::ARM64Reg carry = DecodeReg(DoCarry(ctx.reg_alloc, carry_in, carry_inst));
+    Arm64Gen::ARM64Reg overflow = overflow_inst ? ctx.reg_alloc.ScratchGpr() : INVALID_REG;
+
+    result = bitsize == 64 ? result : DecodeReg(result);
+
+    if (args[1].IsImmediate() && args[1].GetType() == IR::Type::U32) {        
+        if (carry_in.IsImmediate()) {
+            if (carry_in.GetImmediateU1()) {
+                Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+                code.CMP(op_arg, op_arg);
+                code.ADCS(result, result, op_arg);
+            } else {
+                u32 op_arg = args[1].GetImmediateU32();
+                code.ADDSI2R(result, result, op_arg, code.ABI_SCRATCH1);
+            }
+        } else {
+            Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+            code.CMPI2R(carry, 1);
+            code.ADCS(result, result, op_arg);
+        }
+    } else {
+        Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+        if (carry_in.IsImmediate()) {
+            if (carry_in.GetImmediateU1()) {
+                code.CMP(DecodeReg(op_arg), DecodeReg(op_arg));
+                code.ADCS(result, result, op_arg);
+            } else {
+                code.ADDS(result,result, op_arg);
+            }
+        } else {
+            code.CMPI2R(DecodeReg(carry), 1);
+            code.ADCS(result, result, op_arg);
+        }
+    }
+
+    if (nzcv_inst) {
+        code.MRS(nzcv, FIELD_NZCV);
+        ctx.reg_alloc.DefineValue(nzcv_inst, nzcv);
+        ctx.EraseInstruction(nzcv_inst);
+    }
+    if (carry_inst) {
+        code.CSET(carry, CC_CS);
+        ctx.reg_alloc.DefineValue(carry_inst, carry);
+        ctx.EraseInstruction(carry_inst);
+    }
+    if (overflow_inst) {
+        code.CSET(overflow, CC_VS);
+        ctx.reg_alloc.DefineValue(overflow_inst, overflow);
+        ctx.EraseInstruction(overflow_inst);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitAdd32(EmitContext& ctx, IR::Inst* inst) {
+    EmitAdd(code, ctx, inst, 32);
+}
+
+void EmitA64::EmitAdd64(EmitContext& ctx, IR::Inst* inst) {
+    EmitAdd(code, ctx, inst, 64);
+}
+
+static void EmitSub(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bitsize) {
+    auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
+    auto overflow_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetOverflowFromOp);
+    auto nzcv_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetNZCVFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& carry_in = args[2];
+
+    Arm64Gen::ARM64Reg nzcv = DoNZCV(code, ctx.reg_alloc, nzcv_inst);
+    Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    Arm64Gen::ARM64Reg carry = DoCarry(ctx.reg_alloc, carry_in, carry_inst);
+    Arm64Gen::ARM64Reg overflow = overflow_inst ? ctx.reg_alloc.ScratchGpr() : INVALID_REG;
+
+    // TODO: Consider using LEA.
+    // TODO: Optimize CMP case.
+
+    result = bitsize == 64 ? result : DecodeReg(result);
+
+    if (args[1].IsImmediate() && args[1].GetType() == IR::Type::U32) {        
+        if (carry_in.IsImmediate()) {
+            if (carry_in.GetImmediateU1()) {
+                u32 op_arg = args[1].GetImmediateU32();
+                code.SUBSI2R(result, result, op_arg, code.ABI_SCRATCH1);
+            } else {
+                Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+
+                code.ADDSI2R(op_arg, op_arg, 0); // Clear carry
+                code.SBCS(result, result, op_arg);
+            }
+        } else {
+            Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+            code.CMPI2R(carry, 0x1);
+            code.SBCS(result, result, op_arg);
+        }
+    } else {
+        Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+        if (carry_in.IsImmediate()) {
+            if (carry_in.GetImmediateU1()) {
+                code.SUBS(result, result, op_arg);
+            } else {
+                code.ADDSI2R(DecodeReg(op_arg), DecodeReg(op_arg), 0); // Clear carry
+                code.SBCS(result,result, op_arg);
+            }
+        } else {
+            code.CMPI2R(DecodeReg(carry), 0x1);
+            code.SBCS(result,result, op_arg);
+        }
+    }
+
+    if (nzcv_inst) {
+        code.MRS(nzcv, FIELD_NZCV);
+        ctx.reg_alloc.DefineValue(nzcv_inst, nzcv);
+        ctx.EraseInstruction(nzcv_inst);
+    }
+    if (carry_inst) {
+        code.CSET(carry, CC_CS);
+        ctx.reg_alloc.DefineValue(carry_inst, carry);
+        ctx.EraseInstruction(carry_inst);
+    }
+    if (overflow_inst) {
+        code.CSET(overflow, CC_VS);
+        ctx.reg_alloc.DefineValue(overflow_inst, overflow);
+        ctx.EraseInstruction(overflow_inst);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSub32(EmitContext& ctx, IR::Inst* inst) {
+    EmitSub(code, ctx, inst, 32);
+}
+
+void EmitA64::EmitSub64(EmitContext& ctx, IR::Inst* inst) {
+    EmitSub(code, ctx, inst, 64);
+}
+
+void EmitA64::EmitMul32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    ARM64Reg op_arg = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
+    
+    code.MUL(result, result, op_arg);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitMul64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+
+    code.MUL(result, result, op_arg);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 } // namespace Dynarmic::BackendA64
