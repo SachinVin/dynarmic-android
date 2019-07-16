@@ -1117,4 +1117,58 @@ void EmitA64::EmitZeroExtendWordToLong(EmitContext& ctx, IR::Inst* inst) {
 //        ctx.reg_alloc.DefineValue(inst, result);
 //    }
 //}
+
+void EmitA64::EmitByteReverseWord(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    code.REV32(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitByteReverseHalf(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    code.REV16(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+//void EmitA64::EmitByteReverseDual(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(args[0]);
+//    code.bswap(result);
+//    ctx.reg_alloc.DefineValue(inst, result);
+//}
+
+void EmitA64::EmitCountLeadingZeros32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+        ARM64Reg source = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+        ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
+
+        code.CLZ(result, source);
+        ctx.reg_alloc.DefineValue(inst, result);    
+}
+
+//void EmitA64::EmitCountLeadingZeros64(EmitContext& ctx, IR::Inst* inst) {
+//   auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//   if (code.DoesCpuSupport(Xbyak::util::Cpu::tLZCNT)) {
+//       Xbyak::Reg64 source = ctx.reg_alloc.UseGpr(args[0]).cvt64();
+//       Xbyak::Reg64 result = ctx.reg_alloc.ScratchGpr().cvt64();
+//
+//       code.lzcnt(result, source);
+//
+//       ctx.reg_alloc.DefineValue(inst, result);
+//   } else {
+//       Xbyak::Reg64 source = ctx.reg_alloc.UseScratchGpr(args[0]).cvt64();
+//       Xbyak::Reg64 result = ctx.reg_alloc.ScratchGpr().cvt64();
+//
+//       // The result of a bsr of zero is undefined, but zf is set after it.
+//       code.bsr(result, source);
+//       code.mov(source.cvt32(), 0xFFFFFFFF);
+//       code.cmovz(result.cvt32(), source.cvt32());
+//       code.neg(result.cvt32());
+//       code.add(result.cvt32(), 63);
+//
+//       ctx.reg_alloc.DefineValue(inst, result);
+//   }
+//}
 } // namespace Dynarmic::BackendA64
