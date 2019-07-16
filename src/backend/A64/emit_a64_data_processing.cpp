@@ -1037,4 +1037,84 @@ void EmitA64::EmitNot32(EmitContext& ctx, IR::Inst* inst) {
 //    }
 //    ctx.reg_alloc.DefineValue(inst, result);
 //}
+
+void EmitA64::EmitSignExtendByteToWord(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    code.SXTB(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSignExtendHalfToWord(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    code.SXTH(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSignExtendByteToLong(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    code.SXTB(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSignExtendHalfToLong(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    code.SXTH(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSignExtendWordToLong(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    code.SXTW(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitZeroExtendByteToWord(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    code.UXTB(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitZeroExtendHalfToWord(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    code.UXTH(result, result);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitZeroExtendByteToLong(EmitContext& ctx, IR::Inst* inst) {
+    // x64 zeros upper 32 bits on a 32-bit move
+    EmitZeroExtendByteToWord(ctx, inst);
+}
+
+void EmitA64::EmitZeroExtendHalfToLong(EmitContext& ctx, IR::Inst* inst) {
+    // x64 zeros upper 32 bits on a 32-bit move
+    EmitZeroExtendHalfToWord(ctx, inst);
+}
+
+void EmitA64::EmitZeroExtendWordToLong(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    code.MOV(result, DecodeReg(result));
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+//void EmitA64::EmitZeroExtendLongToQuad(EmitContext& ctx, IR::Inst* inst) {
+//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+//    if (args[0].IsInGpr()) {
+//        Xbyak::Reg64 source = ctx.reg_alloc.UseGpr(args[0]);
+//        Xbyak::Xmm result = ctx.reg_alloc.ScratchXmm();
+//        code.movq(result, source);
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    } else {
+//        Xbyak::Xmm result = ctx.reg_alloc.UseScratchXmm(args[0]);
+//        code.movq(result, result);
+//        ctx.reg_alloc.DefineValue(inst, result);
+//    }
+//}
 } // namespace Dynarmic::BackendA64
