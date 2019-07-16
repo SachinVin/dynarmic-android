@@ -30,16 +30,23 @@ if (DYNARMIC_TESTS_USE_UNICORN)
     target_sources(dynarmic_tests PRIVATE
         A32/fuzz_arm.cpp
         A32/fuzz_thumb.cpp
-        A64/fuzz_with_unicorn.cpp
-        A64/misaligned_page_table.cpp
-        A64/verify_unicorn.cpp
+        #A64/fuzz_with_unicorn.cpp
+        #A64/verify_unicorn.cpp
         fuzz_util.cpp
         fuzz_util.h
         unicorn_emu/a32_unicorn.cpp
         unicorn_emu/a32_unicorn.h
-        unicorn_emu/a64_unicorn.cpp
-        unicorn_emu/a64_unicorn.h
+        #unicorn_emu/a64_unicorn.cpp
+        #unicorn_emu/a64_unicorn.h
     )
+    if (ARCHITECTURE_x86_64)
+        target_sources(dynarmic_tests PRIVATE
+            A64/fuzz_with_unicorn.cpp
+            A64/verify_unicorn.cpp
+            unicorn_emu/a64_unicorn.cpp
+            unicorn_emu/a64_unicorn.h
+        )
+    endif()
     target_link_libraries(dynarmic_tests PRIVATE Unicorn::Unicorn)
 endif()
 
