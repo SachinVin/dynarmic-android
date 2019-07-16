@@ -62,7 +62,11 @@ public:
     /// @note this clobbers ABI caller-save registers
     void LookupBlock();
 
-    void* MConst(u64 lower, u64 upper = 0);
+    u64 MConst(u64 lower, u64 upper = 0);
+
+    void EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper = 0);
+
+    void PatchConstPool();
 
     /// Far code sits far away from the near code. Execution remains primarily in near code.
     /// "Cold" / Rarely executed instructions sit in far code, so the CPU doesn't fetch them unless necessary.

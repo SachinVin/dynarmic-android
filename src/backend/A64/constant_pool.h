@@ -24,7 +24,15 @@ public:
 
     void AllocatePool();
 
-    void* GetConstant(u64 lower, u64 upper = 0);
+    u64 GetConstant(u64 lower, u64 upper = 0);
+
+    void EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper = 0);
+
+    void PatchPool();
+
+    void Clear();
+
+
 
 private:
     static constexpr size_t align_size = 16; // bytes
@@ -35,6 +43,14 @@ private:
     size_t pool_size;
     u8* pool_begin;
     u8* current_pool_ptr;
+
+    struct PatchInfo {
+        const void* ptr;
+        Arm64Gen::ARM64Reg Rt;
+        std::tuple<u64, u64> constant;
+    };
+
+    std::vector<PatchInfo> patch_info;
 };
 
 } // namespace Dynarmic::BackendA64

@@ -134,6 +134,7 @@ A32EmitA64::BlockDescriptor A32EmitA64::Emit(IR::Block& block) {
     EmitAddCycles(block.CycleCount());
     EmitA64::EmitTerminal(block.GetTerminal(), block.Location());
     code.BRK(0);
+    code.PatchConstPool();
     code.FlushIcacheSection(entrypoint, code.GetCodePtr());
 
     const size_t size = static_cast<size_t>(code.GetCodePtr() - entrypoint);
