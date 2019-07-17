@@ -551,6 +551,12 @@ void A32EmitA64::EmitA32SetZFlag(A32EmitContext& ctx, IR::Inst* inst) {
     code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
 }
 
+void A32EmitA64::EmitA32SetCheckBit(A32EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const ARM64Reg to_store = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    code.STRB(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, check_bit));
+}
+
 void A32EmitA64::EmitA32GetCFlag(A32EmitContext& ctx, IR::Inst* inst) {
     Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
     code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_nzcv));
@@ -1355,8 +1361,13 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::If terminal, IR::LocationDescriptor 
     EmitTerminal(terminal.then_, initial_location);
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::CheckBit, IR::LocationDescriptor) {
-    ASSERT_MSG(false, "Term::CheckBit should never be emitted by the A32 frontend");
+void A32EmitA64::EmitTerminalImpl(IR::Term::CheckBit terminal, IR::LocationDescriptor initial_location) {
+    FixupBranch fail;
+    code.LDRB(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, check_bit));
+    fail = code.CBZ(DecodeReg(code.ABI_SCRATCH1));
+    EmitTerminal(terminal.then_, initial_location);
+    code.SetJumpTarget(fail);
+    EmitTerminal(terminal.else_, initial_location);
 }
 
 void A32EmitA64::EmitTerminalImpl(IR::Term::CheckHalt terminal, IR::LocationDescriptor initial_location) {
