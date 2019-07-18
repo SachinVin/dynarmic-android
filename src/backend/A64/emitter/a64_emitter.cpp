@@ -324,7 +324,7 @@ void ARM64XEmitter::FlushIcache() {
     m_lastCacheFlushEnd = m_code;
 }
 
-void ARM64XEmitter::FlushIcacheSection(u8* start, u8* end) {
+void ARM64XEmitter::FlushIcacheSection(const u8* start, const u8* end) {
     if (start == end)
         return;
 
@@ -748,6 +748,8 @@ void ARM64XEmitter::EncodeBitfieldMOVInst(u32 op, ARM64Reg Rd, ARM64Reg Rn, u32 
 
 void ARM64XEmitter::EncodeLoadStoreRegisterOffset(u32 size, u32 opc, ARM64Reg Rt, ARM64Reg Rn,
                                                   ArithOption Rm) {
+    ASSERT_MSG(Rm.GetType() == ArithOption::TYPE_EXTENDEDREG, "Shifted registers are not supported used Indexed registers");
+
     Rt = DecodeReg(Rt);
     Rn = DecodeReg(Rn);
     ARM64Reg decoded_Rm = DecodeReg(Rm.GetReg());
@@ -995,7 +997,7 @@ void ARM64XEmitter::BL(const void* ptr) {
     EncodeUnconditionalBranchInst(1, ptr);
 }
 
-void ARM64XEmitter::QuickCallFunction(ARM64Reg scratchreg, const void* func) {
+void ARM64XEmitter::QuickCallFunction(const void* func, ARM64Reg scratchreg) {
     s64 distance = reinterpret_cast<s64>(func) - reinterpret_cast<s64>(m_code);
     distance >>= 2; // Can only branch to opcode-aligned (4) addresses
     if (!IsInRangeImm26(distance)) {
