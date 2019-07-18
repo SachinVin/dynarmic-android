@@ -444,7 +444,7 @@ public:
             return (m_shifttype << 22) | (m_shift << 10);
             break;
         default:
-            DEBUG_ASSERT_MSG(false, "Invalid type in GetData");
+            ASSERT_MSG(false, "Invalid type in GetData");
             break;
         }
         return 0;
@@ -512,7 +512,7 @@ public:
     const u8* AlignCodePage();
     const u8* GetCodePtr() const;
     void FlushIcache();
-    void FlushIcacheSection(u8* start, u8* end);
+    void FlushIcacheSection(const u8* start, const u8* end);
     u8* GetWritableCodePtr();
 
     // FixupBranch branching
@@ -879,10 +879,10 @@ public:
     }
 
     // Plain function call
-    void QuickCallFunction(ARM64Reg scratchreg, const void* func);
+    void QuickCallFunction(const void* func, ARM64Reg scratchreg = X16);
     template <typename T>
-    void QuickCallFunction(ARM64Reg scratchreg, T func) {
-        QuickCallFunction(scratchreg, (const void*)func);
+    void QuickCallFunction(T func, ARM64Reg scratchreg = X16) {
+        QuickCallFunction((const void*)func, scratchreg);
     }
 };
 
