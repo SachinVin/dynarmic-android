@@ -7,9 +7,9 @@ add_executable(dynarmic_tests
     A32/test_arm_instructions.cpp
     A32/test_thumb_instructions.cpp
     A32/testenv.h
-    A64/a64.cpp
-    A64/testenv.h
-    cpu_info.cpp
+    # A64/a64.cpp
+    # A64/testenv.h
+    # cpu_info.cpp
     decoder_tests.cpp
     fp/FPToFixed.cpp
     fp/FPValue.cpp
@@ -18,6 +18,14 @@ add_executable(dynarmic_tests
     main.cpp
     rand_int.h
 )
+
+if (ARCHITECTURE_x86_64)
+    target_sources(dynarmic_tests PRIVATE
+        A64/a64.cpp
+        A64/testenv.h
+        cpu_info.cpp
+    )
+endif()
 
 if (DYNARMIC_TESTS_USE_UNICORN)
     target_sources(dynarmic_tests PRIVATE
