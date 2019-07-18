@@ -8,6 +8,10 @@
 
 #include <fmt/format.h>
 
+#ifdef ANDROID
+#include <android/log.h>
+#endif
+
 // For asserts we'd like to keep all the junk executed when an assert happens away from the
 // important code in the function. One way of doing this is to put all the relevant code inside a
 // lambda and force the compiler to not inline it. Unfortunately, MSVC seems to have no syntax to
@@ -26,18 +30,32 @@ static void assert_noinline_call(const Fn& fn) {
     throw "";
 }
 
+#ifdef ANDROID
+#define ASSERT(_a_) \
+    do if (!(_a_)) { assert_noinline_call([] { \
+        __android_log_print(ANDROID_LOG_FATAL, "Dynarmic", "%s", fmt::format("Assertion Failed!: {}\n", #_a_).c_str()); \
+    }); } while (false)
+#else
 #define ASSERT(_a_) \
     do if (!(_a_)) { assert_noinline_call([] { \
         fmt::print(stderr, "Assertion Failed!: {}\n", #_a_); \
     }); } while (false)
+#endif
 
+#ifdef  ANDROID
+#define ASSERT_MSG(_a_, ...) \
+    do if (!(_a_)) { assert_noinline_call([&] { \
+        __android_log_print(ANDROID_LOG_FATAL, "Dynarmic", "%s", fmt::format("Assertion Failed!: {}\n", #_a_).c_str()); \
+        __android_log_print(ANDROID_LOG_FATAL, "Dynarmic", "%s", fmt::format(__VA_ARGS__).c_str()); \
+    }); } while (false)
+#else
 #define ASSERT_MSG(_a_, ...) \
     do if (!(_a_)) { assert_noinline_call([&] { \
         fmt::print(stderr, "Assertion Failed!: {}\n", #_a_); \
         fmt::print(stderr, "Message: " __VA_ARGS__); \
         fmt::print(stderr, "\n"); \
     }); } while (false)
-
+#endif
 #define UNREACHABLE() ASSERT_MSG(false, "Unreachable code!")
 #define UNREACHABLE_MSG(...) ASSERT_MSG(false, __VA_ARGS__)
 
