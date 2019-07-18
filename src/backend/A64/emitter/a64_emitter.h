@@ -855,8 +855,8 @@ public:
     bool TryEORI2R(ARM64Reg Rd, ARM64Reg Rn, u32 imm);
 
     // ABI related
-    void ABI_PushRegisters(std::bitset<32> registers);
-    void ABI_PopRegisters(std::bitset<32> registers);
+    void ABI_PushRegisters(u32 registers);
+    void ABI_PopRegisters(u32 registers);
 
     // Utility to generate a call to a std::function object.
     //
@@ -1062,8 +1062,8 @@ public:
     void MOVI2FDUP(ARM64Reg Rd, float value, ARM64Reg scratch = INVALID_REG);
 
     // ABI related
-    void ABI_PushRegisters(std::bitset<32> registers, ARM64Reg tmp = INVALID_REG);
-    void ABI_PopRegisters(std::bitset<32> registers, ARM64Reg tmp = INVALID_REG);
+    void ABI_PushRegisters(u32 registers, ARM64Reg tmp = INVALID_REG);
+    void ABI_PopRegisters(u32 registers, ARM64Reg tmp = INVALID_REG);
 
 private:
     ARM64XEmitter* m_emit;
