@@ -13,8 +13,8 @@
 #include "common/assert.h"
 #include "common/common_types.h"
 
-namespace Dynarmic::BackendA64 {
-namespace Arm64Gen {
+namespace Dynarmic::BackendA64::Arm64Gen {
+
 // X30 serves a dual purpose as a link register
 // Encoded as <u3:type><u5:reg>
 // Types:
@@ -57,7 +57,7 @@ enum ARM64Reg {
     W29,
     W30,
 
-    WSP, // 32bit stack pointer
+    WSP,  // 32bit stack pointer
 
     // 64bit registers
     X0 = 0x20,
@@ -92,7 +92,7 @@ enum ARM64Reg {
     X29,
     X30,
 
-    SP, // 64bit stack pointer
+    SP,  // 64bit stack pointer
 
     // VFP single precision registers
     S0 = 0x40,
@@ -277,7 +277,7 @@ enum IndexType {
     INDEX_UNSIGNED,
     INDEX_POST,
     INDEX_PRE,
-    INDEX_SIGNED, // used in LDP/STP
+    INDEX_SIGNED,  // used in LDP/STP
 };
 
 enum ShiftAmount {
@@ -288,11 +288,11 @@ enum ShiftAmount {
 };
 
 enum RoundingMode {
-    ROUND_A, // round to nearest, ties to away
-    ROUND_M, // round towards -inf
-    ROUND_N, // round to nearest, ties to even
-    ROUND_P, // round towards +inf
-    ROUND_Z, // round towards zero
+    ROUND_A,  // round to nearest, ties to away
+    ROUND_M,  // round towards -inf
+    ROUND_N,  // round to nearest, ties to even
+    ROUND_P,  // round towards +inf
+    ROUND_Z,  // round towards zero
 };
 
 struct FixupBranch {
@@ -317,11 +317,12 @@ struct FixupBranch {
     ARM64Reg reg;
 };
 
+// The only system registers accessible from EL0 (user space)
 enum PStateField {
     FIELD_SPSel = 0,
     FIELD_DAIFSet,
     FIELD_DAIFClr,
-    FIELD_NZCV, // The only system registers accessible from EL0 (user space)
+    FIELD_NZCV,
     FIELD_PMCR_EL0,
     FIELD_PMCCNTR_EL0,
     FIELD_FPCR = 0x340,
@@ -495,6 +496,7 @@ protected:
 public:
     ARM64XEmitter() : m_code(nullptr), m_lastCacheFlushEnd(nullptr) {
     }
+
     ARM64XEmitter(u8* code_ptr) {
         m_code = code_ptr;
         m_lastCacheFlushEnd = code_ptr;
@@ -502,6 +504,7 @@ public:
 
     virtual ~ARM64XEmitter() {
     }
+
     void SetCodePtr(u8* ptr);
     void SetCodePtrUnsafe(u8* ptr);
     void ReserveCodeSpace(u32 bytes);
@@ -685,6 +688,7 @@ public:
     void BICS(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
         BICS(Rd, Rn, Rm, ArithOption(Rd, ST_LSL, 0));
     }
+
     // Convenience wrappers around ORR. These match the official convenience
     // syntax.
     void MOV(ARM64Reg Rd, ARM64Reg Rm, ArithOption Shift);
@@ -706,6 +710,7 @@ public:
     void TST(ARM64Reg Rn, ARM64Reg Rm) {
         ANDS(Is64Bit(Rn) ? ZR : WZR, Rn, Rm);
     }
+
     // Add/subtract (immediate)
     void ADD(ARM64Reg Rd, ARM64Reg Rn, u32 imm, bool shift = false);
     void ADDS(ARM64Reg Rd, ARM64Reg Rn, u32 imm, bool shift = false);
@@ -734,10 +739,10 @@ public:
     void SXTW(ARM64Reg Rd, ARM64Reg Rn);
     void UXTB(ARM64Reg Rd, ARM64Reg Rn);
     void UXTH(ARM64Reg Rd, ARM64Reg Rn);
-
     void UBFX(ARM64Reg Rd, ARM64Reg Rn, int lsb, int width) {
         UBFM(Rd, Rn, lsb, lsb + width - 1);
     }
+
     // Load Register (Literal)
     void LDR(ARM64Reg Rt, u32 imm);
     void LDRSW(ARM64Reg Rt, u32 imm);
@@ -885,6 +890,7 @@ class ARM64FloatEmitter {
 public:
     ARM64FloatEmitter(ARM64XEmitter* emit) : m_emit(emit) {
     }
+
     void LDR(u8 size, IndexType type, ARM64Reg Rt, ARM64Reg Rn, s32 imm);
     void STR(u8 size, IndexType type, ARM64Reg Rt, ARM64Reg Rn, s32 imm);
 
@@ -920,8 +926,7 @@ public:
     void FABS(ARM64Reg Rd, ARM64Reg Rn);
     void FNEG(ARM64Reg Rd, ARM64Reg Rn);
     void FSQRT(ARM64Reg Rd, ARM64Reg Rn);
-    void FMOV(ARM64Reg Rd, ARM64Reg Rn,
-              bool top = false); // Also generalized move between GPR/FP
+    void FMOV(ARM64Reg Rd, ARM64Reg Rn, bool top = false); // Also generalized move between GPR/FP
 
     // Scalar - 2 Source
     void FADD(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
@@ -1062,9 +1067,11 @@ public:
 
 private:
     ARM64XEmitter* m_emit;
+
     inline void Write32(u32 value) {
         m_emit->Write32(value);
     }
+
     // Emitting functions
     void EmitLoadStoreImmediate(u8 size, u32 opc, IndexType type, ARM64Reg Rt, ARM64Reg Rn,
                                 s32 imm);
@@ -1110,7 +1117,7 @@ private:
     void UXTL(u8 src_size, ARM64Reg Rd, ARM64Reg Rn, bool upper);
 };
 
-class ARM64CodeBlock : public Dynarmic::BackendA64::CodeBlock<ARM64XEmitter> {
+class ARM64CodeBlock : public CodeBlock<ARM64XEmitter> {
 private:
     void PoisonMemory() override {
         // If our memory isn't a multiple of u32 then this won't write the last
@@ -1124,5 +1131,5 @@ private:
         }
     }
 };
-} // namespace Arm64Gen
-} // namespace Dynarmic::BackendA64
+
+} // namespace Dynarmic::BackendA64::Arm64Gen
