@@ -7,7 +7,11 @@
 #include <cstddef>
 #include <vector>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/mman.h>
+#endif
 
 #include "common/assert.h"
 #include "common/common_types.h"
@@ -50,10 +54,15 @@ public:
     void AllocCodeSpace(size_t size) {
         region_size = size;
         total_region_size = size;
-        void* ptr =
-            mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0);
+#if defined(_WIN32)
+        void* ptr = VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+#else
+        void* ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0);
+
         if (ptr == MAP_FAILED)
             ptr = nullptr;
+#endif
+        ASSERT_MSG(ptr != nullptr, "Failed to allocate executable memory");
         region = static_cast<u8*>(ptr);
         T::SetCodePtr(region);
     }
@@ -69,7 +78,7 @@ public:
     // it'll do the job.
     void FreeCodeSpace() {
         ASSERT(!m_is_child);
-        ASSERT(munmap(region, total_region_size) != 0);
+        ASSERT(munmap(region, total_region_size) == 0);
         region = nullptr;
         region_size = 0;
         total_region_size = 0;
