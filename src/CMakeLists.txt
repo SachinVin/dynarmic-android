@@ -204,6 +204,7 @@ add_library(dynarmic
     frontend/ir/value.h
     ir_opt/a32_constant_memory_reads_pass.cpp
     ir_opt/a32_get_set_elimination_pass.cpp
+    ir_opt/a32_merge_interpret_blocks.cpp
     ir_opt/a64_callback_config_pass.cpp
     ir_opt/a64_get_set_elimination_pass.cpp
     ir_opt/a64_merge_interpret_blocks.cpp
