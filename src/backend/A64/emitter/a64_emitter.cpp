@@ -15,8 +15,8 @@
 #include "common/common_types.h"
 #include "common/math_util.h"
 
-namespace Dynarmic::BackendA64 {
-namespace Arm64Gen {
+namespace Dynarmic::BackendA64::Arm64Gen {
+
 namespace {
 const int kWRegSizeInBits = 32;
 const int kXRegSizeInBits = 64;
@@ -863,7 +863,7 @@ void ARM64XEmitter::SetJumpTarget(FixupBranch const& branch) {
     switch (branch.type) {
     case 1: // CBNZ
         Not = true;
-        __attribute__((fallthrough));
+        [[fallthrough]];
     case 0: // CBZ
     {
         ASSERT_MSG(IsInRangeImm19(distance), "%s(%d): Received too large distance: %" PRIx64,
@@ -879,7 +879,7 @@ void ARM64XEmitter::SetJumpTarget(FixupBranch const& branch) {
         break;
     case 4: // TBNZ
         Not = true;
-        __attribute__((fallthrough));
+        [[fallthrough]];
     case 3: // TBZ
     {
         ASSERT_MSG(IsInRangeImm14(distance), "%s(%d): Received too large distance: %" PRIx64,
@@ -3722,5 +3722,4 @@ void ARM64FloatEmitter::MOVI2FDUP(ARM64Reg Rd, float value, ARM64Reg scratch) {
     DUP(32, Rd, Rd, 0);
 }
 
-} // namespace Arm64Gen
-} // namespace Dynarmic::BackendA64
+} // namespace Dynarmic::BackendA64::Arm64Gen
