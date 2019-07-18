@@ -358,6 +358,9 @@ target_link_libraries(dynarmic
         tsl::robin_map
         $<$<BOOL:DYNARMIC_USE_LLVM>:${llvm_libs}>
 )
+if(ANDROID)
+    target_link_libraries(dynarmic PRIVATE log)
+endif()
 if (DYNARMIC_ENABLE_CPU_FEATURE_DETECTION)
     target_compile_definitions(dynarmic PRIVATE DYNARMIC_ENABLE_CPU_FEATURE_DETECTION=1)
 endif()
