@@ -43,7 +43,12 @@ include(CreateDirectoryGroups)
 create_target_directory_groups(dynarmic_tests)
 create_target_directory_groups(dynarmic_print_info)
 
-target_link_libraries(dynarmic_tests PRIVATE dynarmic boost catch fmt mp xbyak)
+target_link_libraries(dynarmic_tests PRIVATE dynarmic boost catch fmt mp)
+
+if (ARCHITECTURE_x86_64)
+    target_link_libraries(dynarmic_tests PRIVATE xbyak)
+endif()
+
 target_include_directories(dynarmic_tests PRIVATE . ../src)
 target_compile_options(dynarmic_tests PRIVATE ${DYNARMIC_CXX_FLAGS})
 target_compile_definitions(dynarmic_tests PRIVATE FMT_USE_USER_DEFINED_LITERALS=0)
