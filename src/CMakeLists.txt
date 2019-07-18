@@ -152,6 +152,7 @@ if ("A32" IN_LIST DYNARMIC_FRONTENDS)
         frontend/A32/translate/translate_thumb.cpp
         ir_opt/a32_constant_memory_reads_pass.cpp
         ir_opt/a32_get_set_elimination_pass.cpp
+        ir_opt/a32_merge_interpret_blocks.cpp
     )
 endif()
 
