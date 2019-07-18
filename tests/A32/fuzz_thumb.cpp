@@ -201,7 +201,7 @@ void FuzzJitThumb(const size_t instruction_count, const size_t instructions_to_e
     }
 }
 
-TEST_CASE("Fuzz Thumb instructions set 1", "[JitX64][Thumb]") {
+TEST_CASE("Fuzz Thumb instructions set 1", "[JitX64][JitA64][Thumb]") {
     const std::array instructions = {
         ThumbInstGen("00000xxxxxxxxxxx"), // LSL <Rd>, <Rm>, #<imm5>
         ThumbInstGen("00001xxxxxxxxxxx"), // LSR <Rd>, <Rm>, #<imm5>
@@ -269,7 +269,7 @@ TEST_CASE("Fuzz Thumb instructions set 1", "[JitX64][Thumb]") {
 #endif
 }
 
-TEST_CASE("Fuzz Thumb instructions set 2 (affects PC)", "[JitX64][Thumb]") {
+TEST_CASE("Fuzz Thumb instructions set 2 (affects PC)", "[JitX64][JitA64][Thumb]") {
     const std::array instructions = {
         // TODO: We currently can't test BX/BLX as we have
         //       no way of preventing the unpredictable
