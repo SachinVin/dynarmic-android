@@ -145,7 +145,7 @@ OPCODE(ZeroExtendWordToLong,                                U64,            U32 
 OPCODE(ByteReverseWord,                                     U32,            U32                                                             )
 OPCODE(ByteReverseHalf,                                     U16,            U16                                                             )
 OPCODE(CountLeadingZeros32,                                 U32,            U32                                                             )
-//OPCODE(CountLeadingZeros64,                                 U64,            U64                                                             )
+OPCODE(CountLeadingZeros64,                                 U64,            U64                                                             )
 //OPCODE(ExtractRegister32,                                   U32,            U32,            U32,            U8                              )
 //OPCODE(ExtractRegister64,                                   U64,            U64,            U64,            U8                              )
 //OPCODE(MaxSigned32,                                         U32,            U32,            U32                                             )
