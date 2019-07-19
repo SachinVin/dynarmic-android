@@ -921,24 +921,22 @@ void EmitA64::EmitAnd32(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
-//void EmitA64::EmitAnd64(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//
-//    Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(args[0]);
-//
-//    if (args[1].FitsInImmediateS32()) {
-//        u32 op_arg = u32(args[1].GetImmediateS32());
-//
-//        code.and_(result, op_arg);
-//    } else {
-//        OpArg op_arg = ctx.reg_alloc.UseOpArg(args[1]);
-//        op_arg.setBit(64);
-//
-//        code.and_(result, *op_arg);
-//    }
-//
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
+void EmitA64::EmitAnd64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+
+    if (args[1].IsImmediate()) {
+        u32 op_arg = args[1].GetImmediateU32();
+        code.ANDI2R(result, result, op_arg, code.ABI_SCRATCH1);
+    }
+    else {
+        Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+        code.AND(result, result, op_arg);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 
 void EmitA64::EmitEor32(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -956,24 +954,22 @@ void EmitA64::EmitEor32(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
-//void EmitA64::EmitEor64(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//
-//    Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(args[0]);
-//
-//    if (args[1].FitsInImmediateS32()) {
-//        u32 op_arg = u32(args[1].GetImmediateS32());
-//
-//        code.xor_(result, op_arg);
-//    } else {
-//        OpArg op_arg = ctx.reg_alloc.UseOpArg(args[1]);
-//        op_arg.setBit(64);
-//
-//        code.xor_(result, *op_arg);
-//    }
-//
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
+void EmitA64::EmitEor64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+
+    if (args[1].IsImmediate()) {
+        u32 op_arg = args[1].GetImmediateU32();
+        code.EORI2R(result, result, op_arg, code.ABI_SCRATCH1);
+    }
+    else {
+        Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+        code.EOR(result, result, op_arg);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 
 void EmitA64::EmitOr32(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -991,24 +987,22 @@ void EmitA64::EmitOr32(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
-//void EmitA64::EmitOr64(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//
-//    Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(args[0]);
-//
-//    if (args[1].FitsInImmediateS32()) {
-//        u32 op_arg = u32(args[1].GetImmediateS32());
-//
-//        code.or_(result, op_arg);
-//    } else {
-//        OpArg op_arg = ctx.reg_alloc.UseOpArg(args[1]);
-//        op_arg.setBit(64);
-//
-//        code.or_(result, *op_arg);
-//    }
-//
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
+void EmitA64::EmitOr64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+
+    if (args[1].IsImmediate()) {
+        u32 op_arg = args[1].GetImmediateU32();
+        code.ORRI2R(result, result, op_arg, code.ABI_SCRATCH1);
+    }
+    else {
+        Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
+        code.ORR(result, result, op_arg);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 
 void EmitA64::EmitNot32(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -1024,19 +1018,20 @@ void EmitA64::EmitNot32(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
-//void EmitA64::EmitNot64(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//
-//    Xbyak::Reg64 result;
-//    if (args[0].IsImmediate()) {
-//        result = ctx.reg_alloc.ScratchGpr();
-//        code.mov(result, ~args[0].GetImmediateU64());
-//    } else {
-//        result = ctx.reg_alloc.UseScratchGpr(args[0]);
-//        code.not_(result);
-//    }
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
+void EmitA64::EmitNot64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    Arm64Gen::ARM64Reg result;
+    if (args[0].IsImmediate()) {
+        result = DecodeReg(ctx.reg_alloc.ScratchGpr());
+        code.MOVI2R(result, u32(~args[0].GetImmediateU32()));
+    }
+    else {
+        result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+        code.MVN(result, result);
+    }
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 
 void EmitA64::EmitSignExtendByteToWord(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
