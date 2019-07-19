@@ -394,7 +394,7 @@ void EmitA64::EmitLogicalShiftRight32(EmitContext& ctx, IR::Inst* inst) {
             // if (Rs & 0xFF == 0) goto end;
             code.CMP(shift, WZR);
             end.push_back(code.B(CC_EQ));
-            // if (Rs & 0xFF <= 32) {
+            // if (Rs & 0xFF <= 31) {
             code.SUBI2R(shift, shift, 1); // Subtract 1 to get the bit that is shifted out to the carry.
             code.LSRV(result, result, shift);
             code.ANDI2R(carry, result, 1);
@@ -1127,34 +1127,19 @@ void EmitA64::EmitByteReverseHalf(EmitContext& ctx, IR::Inst* inst) {
 
 void EmitA64::EmitCountLeadingZeros32(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-        ARM64Reg source = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
-        ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
+    ARM64Reg source = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-        code.CLZ(result, source);
-        ctx.reg_alloc.DefineValue(inst, result);    
+    code.CLZ(result, source);
+    ctx.reg_alloc.DefineValue(inst, result);    
 }
 
-//void EmitA64::EmitCountLeadingZeros64(EmitContext& ctx, IR::Inst* inst) {
-//   auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//   if (code.DoesCpuSupport(Xbyak::util::Cpu::tLZCNT)) {
-//       Xbyak::Reg64 source = ctx.reg_alloc.UseGpr(args[0]).cvt64();
-//       Xbyak::Reg64 result = ctx.reg_alloc.ScratchGpr().cvt64();
-//
-//       code.lzcnt(result, source);
-//
-//       ctx.reg_alloc.DefineValue(inst, result);
-//   } else {
-//       Xbyak::Reg64 source = ctx.reg_alloc.UseScratchGpr(args[0]).cvt64();
-//       Xbyak::Reg64 result = ctx.reg_alloc.ScratchGpr().cvt64();
-//
-//       // The result of a bsr of zero is undefined, but zf is set after it.
-//       code.bsr(result, source);
-//       code.mov(source.cvt32(), 0xFFFFFFFF);
-//       code.cmovz(result.cvt32(), source.cvt32());
-//       code.neg(result.cvt32());
-//       code.add(result.cvt32(), 63);
-//
-//       ctx.reg_alloc.DefineValue(inst, result);
-//   }
-//}
+void EmitA64::EmitCountLeadingZeros64(EmitContext& ctx, IR::Inst* inst) {
+   auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+   ARM64Reg source = ctx.reg_alloc.UseGpr(args[0]);
+   ARM64Reg result = ctx.reg_alloc.ScratchGpr();
+
+   code.CLZ(result, source);
+   ctx.reg_alloc.DefineValue(inst, result);
+}
 } // namespace Dynarmic::BackendA64
