@@ -103,15 +103,14 @@ void EmitA64::EmitIsZero64(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
-//void EmitA64::EmitTestBit(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//    Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(args[0]);
-//    ASSERT(args[1].IsImmediate());
-//    // TODO: Flag optimization
-//    code.bt(result, args[1].GetImmediateU8());
-//    code.setc(result.cvt8());
-//    ctx.reg_alloc.DefineValue(inst, result);
-//}
+void EmitA64::EmitTestBit(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    ASSERT(args[1].IsImmediate());
+    // TODO: Flag optimization
+    code.UBFX(result, result, args[1].GetImmediateU8(), 1);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
 
 static void EmitConditionalSelect(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bitsize) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -293,38 +292,31 @@ void EmitA64::EmitLogicalShiftLeft32(EmitContext& ctx, IR::Inst* inst) {
     }
 }
 
-//void EmitA64::EmitLogicalShiftLeft64(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//    auto& operand_arg = args[0];
-//    auto& shift_arg = args[1];
-//
-//    if (shift_arg.IsImmediate()) {
-//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
-//        u8 shift = shift_arg.GetImmediateU8();
-//
-//        if (shift < 64) {
-//            code.shl(result, shift);
-//        } else {
-//            code.xor_(result.cvt32(), result.cvt32());
-//        }
-//
-//        ctx.reg_alloc.DefineValue(inst, result);
-//    } else {
-//        ctx.reg_alloc.Use(shift_arg, HostLoc::RCX);
-//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
-//        Xbyak::Reg64 zero = ctx.reg_alloc.ScratchGpr();
-//
-//        // The x64 SHL instruction masks the shift count by 0x1F before performing the shift.
-//        // ARM differs from the behaviour: It does not mask the count, so shifts above 31 result in zeros.
-//
-//        code.shl(result, code.cl);
-//        code.xor_(zero.cvt32(), zero.cvt32());
-//        code.cmp(code.cl, 64);
-//        code.cmovnb(result, zero);
-//
-//        ctx.reg_alloc.DefineValue(inst, result);
-//    }
-//}
+void EmitA64::EmitLogicalShiftLeft64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+
+    if (shift_arg.IsImmediate()) {
+        ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+        u8 shift = shift_arg.GetImmediateU8();
+
+        if (shift < 64) {
+            code.LSL(result, result, shift);
+        } else {
+            code.MOV(result, ZR);
+        }
+
+        ctx.reg_alloc.DefineValue(inst, result);
+    } else {
+        ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+        ARM64Reg shift = ctx.reg_alloc.UseGpr(shift_arg);
+
+        code.LSLV(result, result, shift);
+
+        ctx.reg_alloc.DefineValue(inst, result);
+    }
+}
 
 void EmitA64::EmitLogicalShiftRight32(EmitContext& ctx, IR::Inst* inst) {
     auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
@@ -668,28 +660,27 @@ void EmitA64::EmitRotateRight32(EmitContext& ctx, IR::Inst* inst) {
     }
 }
 
-//void EmitA64::EmitRotateRight64(EmitContext& ctx, IR::Inst* inst) {
-//    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
-//    auto& operand_arg = args[0];
-//    auto& shift_arg = args[1];
-//
-//    if (shift_arg.IsImmediate()) {
-//        u8 shift = shift_arg.GetImmediateU8();
-//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
-//
-//        code.ror(result, u8(shift & 0x3F));
-//
-//        ctx.reg_alloc.DefineValue(inst, result);
-//    } else {
-//        ctx.reg_alloc.Use(shift_arg, HostLoc::RCX);
-//        Xbyak::Reg64 result = ctx.reg_alloc.UseScratchGpr(operand_arg);
-//
-//        // x64 ROR instruction does (shift & 0x3F) for us.
-//        code.ror(result, code.cl);
-//
-//        ctx.reg_alloc.DefineValue(inst, result);
-//    }
-//}
+void EmitA64::EmitRotateRight64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    auto& operand_arg = args[0];
+    auto& shift_arg = args[1];
+
+    if (shift_arg.IsImmediate()) {
+        u8 shift = shift_arg.GetImmediateU8();
+        ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+
+        code.ROR(result, result, u8(shift & 0x3F));
+
+        ctx.reg_alloc.DefineValue(inst, result);
+    } else {
+        ARM64Reg result = ctx.reg_alloc.UseScratchGpr(operand_arg);
+        ARM64Reg shift = ctx.reg_alloc.UseGpr(shift_arg);
+
+        code.RORV(result, result, shift);
+
+        ctx.reg_alloc.DefineValue(inst, result);
+    }
+}
 
 void EmitA64::EmitRotateRightExtended(EmitContext& ctx, IR::Inst* inst) {
     auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
