@@ -108,10 +108,10 @@ else()
     detect_architecture("__x86_64__" x86_64)
     detect_architecture("__aarch64__" Aarch64)
 endif()
-if (NOT DEFINED ARCHITECTURE)
+if (NOT DEFINED DYNARMIC_ARCHITECTURE)
     message(FATAL_ERROR "Unsupported architecture encountered. Ending CMake generation.")
 endif()
-message(STATUS "Target architecture: ${ARCHITECTURE}")
+message(STATUS "Target architecture: ${DYNARMIC_ARCHITECTURE}")
 
 # Include Boost
 if (NOT TARGET boost)
