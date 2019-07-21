@@ -206,8 +206,8 @@ INST(arm_REVSH,         "REVSH",               "cccc011011111111dddd11111011mmmm
 //INST(arm_USAT16,        "USAT16",              "cccc01101110vvvvdddd11110011nnnn") // v6
 
 // Divide instructions
-//INST(arm_SDIV,          "SDIV",                "cccc01110001dddd1111mmmm0001nnnn") // v7a
-//INST(arm_UDIV,          "UDIV",                "cccc01110011dddd1111mmmm0001nnnn") // v7a
+INST(arm_SDIV,          "SDIV",                "cccc01110001dddd1111mmmm0001nnnn") // v7a
+INST(arm_UDIV,          "UDIV",                "cccc01110011dddd1111mmmm0001nnnn") // v7a
 
 // Multiply (Normal) instructions
 INST(arm_MLA,           "MLA",                 "cccc0000001Sddddaaaammmm1001nnnn") // v2
