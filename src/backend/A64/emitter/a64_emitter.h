@@ -295,6 +295,14 @@ enum RoundingMode {
     ROUND_Z,  // round towards zero
 };
 
+// Size of each element in the Vector
+enum ESize {
+    B,  // Byte
+    H,  // Half Word
+    S,  // Single Word
+    D,  // Double Word
+};
+
 struct FixupBranch {
     u8* ptr;
     // Type defines
@@ -945,6 +953,12 @@ public:
     void FNMADD(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm, ARM64Reg Ra);
     void FNMSUB(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm, ARM64Reg Ra);
 
+    // Scalar three same
+    void SQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    
     // Scalar floating point immediate
     void FMOV(ARM64Reg Rd, uint8_t imm8);
 
