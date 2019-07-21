@@ -1992,6 +1992,17 @@ void ARM64FloatEmitter::EmitThreeSame(bool U, u32 size, u32 opcode, ARM64Reg Rd,
             (opcode << 11) | (1 << 10) | (Rn << 5) | Rd);
 }
 
+void ARM64FloatEmitter::EmitScalarThreeSame(bool U, u32 size, u32 opcode, ARM64Reg Rd, ARM64Reg Rn,
+                                      ARM64Reg Rm) {
+    ASSERT_MSG(!IsQuad(Rd), "%s doesn't support quads!", __func__);
+    Rd = DecodeReg(Rd);
+    Rn = DecodeReg(Rn);
+    Rm = DecodeReg(Rm);
+
+    Write32((U << 29) | (0b1011110001 << 21) | (size << 22) | (Rm << 16) |
+            (opcode << 11) | (1 << 10) | (Rn << 5) | Rd);
+}
+
 void ARM64FloatEmitter::EmitCopy(bool Q, u32 op, u32 imm5, u32 imm4, ARM64Reg Rd, ARM64Reg Rn) {
     Rd = DecodeReg(Rd);
     Rn = DecodeReg(Rn);
@@ -2785,6 +2796,20 @@ void ARM64FloatEmitter::EmitScalar3Source(bool isDouble, ARM64Reg Rd, ARM64Reg R
     int o0 = opcode & 1;
     m_emit->Write32((0x1F << 24) | (type << 22) | (o1 << 21) | (Rm << 16) | (o0 << 15) |
                     (Ra << 10) | (Rn << 5) | Rd);
+}
+
+// Scalar three same
+void ARM64FloatEmitter::SQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(0, static_cast<u32>(esize), 0b000011, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::SQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(0, static_cast<u32>(esize), 0b001011, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(1, static_cast<u32>(esize), 0b000011, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(1, static_cast<u32>(esize), 0b001011, Rd, Rn, Rm);
 }
 
 // Scalar floating point immediate
