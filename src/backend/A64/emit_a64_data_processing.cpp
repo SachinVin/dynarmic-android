@@ -896,6 +896,48 @@ void EmitA64::EmitMul64(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
+
+void EmitA64::EmitUnsignedDiv32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    const ARM64Reg divisor = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
+
+    code.UDIV(result, result, divisor);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitUnsignedDiv64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    const ARM64Reg divisor = ctx.reg_alloc.UseGpr(args[1]);
+
+    code.UDIV(result, result, divisor);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSignedDiv32(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+    const ARM64Reg divisor = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
+
+    code.SDIV(result, result, divisor);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+void EmitA64::EmitSignedDiv64(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
+    const ARM64Reg divisor = ctx.reg_alloc.UseGpr(args[1]);
+
+    code.SDIV(result, result, divisor);
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+
 void EmitA64::EmitAnd32(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
 
