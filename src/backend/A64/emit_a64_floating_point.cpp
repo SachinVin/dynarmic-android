@@ -286,7 +286,6 @@ void FPThreeOp(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, Function fn)
     result = fsize == 32 ? EncodeRegToSingle(result) : EncodeRegToDouble(result);
     operand = fsize == 32 ? EncodeRegToSingle(operand) : EncodeRegToDouble(operand);
 
-
     if constexpr (std::is_member_function_pointer_v<Function>) {
         (code.fp_emitter.*fn)(result, result, operand);
     }
