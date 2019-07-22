@@ -2837,11 +2837,31 @@ void ARM64FloatEmitter::FMOV(ARM64Reg Rd, uint8_t imm8) {
 }
 
 // Vector
+void ARM64FloatEmitter::ADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b10000, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::SUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b10000, Rd, Rn, Rm);
+}
 void ARM64FloatEmitter::AND(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
     EmitThreeSame(0, 0, 3, Rd, Rn, Rm);
 }
 void ARM64FloatEmitter::BSL(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
     EmitThreeSame(1, 1, 3, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::CMGT(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b00110, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::CMHI(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b00110, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::CMHS(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b00111, Rd, Rn, Rm);
 }
 void ARM64FloatEmitter::DUP(u8 size, ARM64Reg Rd, ARM64Reg Rn, u8 index) {
     u32 imm5 = 0;
@@ -2927,6 +2947,14 @@ void ARM64FloatEmitter::REV32(u8 size, ARM64Reg Rd, ARM64Reg Rn) {
 }
 void ARM64FloatEmitter::REV64(u8 size, ARM64Reg Rd, ARM64Reg Rn) {
     Emit2RegMisc(IsQuad(Rd), 0, size >> 4, 0, Rd, Rn);
+}
+void ARM64FloatEmitter::SMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b01101, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b01101, Rd, Rn, Rm);
 }
 void ARM64FloatEmitter::SCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn) {
     Emit2RegMisc(IsQuad(Rd), 0, size >> 6, 0x1D, Rd, Rn);
