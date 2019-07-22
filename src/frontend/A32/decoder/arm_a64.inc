@@ -250,12 +250,12 @@ INST(arm_SMUSD,         "SMUSD",               "cccc01110000dddd1111mmmm01M1nnnn
 //INST(arm_SSAX,          "SSAX",                "cccc01100001nnnndddd11110101mmmm") // v6
 //INST(arm_SSUB8,         "SSUB8",               "cccc01100001nnnndddd11111111mmmm") // v6
 //INST(arm_SSUB16,        "SSUB16",              "cccc01100001nnnndddd11110111mmmm") // v6
-//INST(arm_UADD8,         "UADD8",               "cccc01100101nnnndddd11111001mmmm") // v6
-//INST(arm_UADD16,        "UADD16",              "cccc01100101nnnndddd11110001mmmm") // v6
+INST(arm_UADD8,         "UADD8",               "cccc01100101nnnndddd11111001mmmm") // v6
+INST(arm_UADD16,        "UADD16",              "cccc01100101nnnndddd11110001mmmm") // v6
 //INST(arm_UASX,          "UASX",                "cccc01100101nnnndddd11110011mmmm") // v6
 //INST(arm_USAX,          "USAX",                "cccc01100101nnnndddd11110101mmmm") // v6
-//INST(arm_USUB8,         "USUB8",               "cccc01100101nnnndddd11111111mmmm") // v6
-//INST(arm_USUB16,        "USUB16",              "cccc01100101nnnndddd11110111mmmm") // v6
+INST(arm_USUB8,         "USUB8",               "cccc01100101nnnndddd11111111mmmm") // v6
+INST(arm_USUB16,        "USUB16",              "cccc01100101nnnndddd11110111mmmm") // v6
 
 // Parallel Add/Subtract (Saturating) instructions
 //INST(arm_QADD8,         "QADD8",               "cccc01100010nnnndddd11111001mmmm") // v6
