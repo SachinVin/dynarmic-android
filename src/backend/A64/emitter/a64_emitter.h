@@ -963,8 +963,13 @@ public:
     void FMOV(ARM64Reg Rd, uint8_t imm8);
 
     // Vector
+    void ADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void AND(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void BSL(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void CMGT(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void CMHI(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void CMHS(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void DUP(u8 size, ARM64Reg Rd, ARM64Reg Rn, u8 index);
     void FABS(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void FADD(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
@@ -992,6 +997,8 @@ public:
     void REV16(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void REV32(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void REV64(u8 size, ARM64Reg Rd, ARM64Reg Rn);
+    void SMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void SCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void UCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void SCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn, int scale);
@@ -1092,6 +1099,7 @@ private:
     void EmitScalar2Source(bool M, bool S, u32 type, u32 opcode, ARM64Reg Rd, ARM64Reg Rn,
                            ARM64Reg Rm);
     void EmitThreeSame(bool U, u32 size, u32 opcode, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void EmitScalarThreeSame(bool U, u32 size, u32 opcode, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void EmitCopy(bool Q, u32 op, u32 imm5, u32 imm4, ARM64Reg Rd, ARM64Reg Rn);
     void Emit2RegMisc(bool Q, bool U, u32 size, u32 opcode, ARM64Reg Rd, ARM64Reg Rn);
     void EmitLoadStoreSingleStructure(bool L, bool R, u32 opcode, bool S, u32 size, ARM64Reg Rt,

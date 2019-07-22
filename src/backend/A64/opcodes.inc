@@ -180,13 +180,13 @@ OPCODE(CountLeadingZeros64,                                 U64,            U64 
 //OPCODE(UnsignedSaturation,                                  U32,            U32,            U8                                              )
 
 // Packed instructions
-//OPCODE(PackedAddU8,                                         U32,            U32,            U32                                             )
+OPCODE(PackedAddU8,                                         U32,            U32,            U32                                             )
 //OPCODE(PackedAddS8,                                         U32,            U32,            U32                                             )
-//OPCODE(PackedSubU8,                                         U32,            U32,            U32                                             )
+OPCODE(PackedSubU8,                                         U32,            U32,            U32                                             )
 //OPCODE(PackedSubS8,                                         U32,            U32,            U32                                             )
-//OPCODE(PackedAddU16,                                        U32,            U32,            U32                                             )
+OPCODE(PackedAddU16,                                        U32,            U32,            U32                                             )
 //OPCODE(PackedAddS16,                                        U32,            U32,            U32                                             )
-//OPCODE(PackedSubU16,                                        U32,            U32,            U32                                             )
+OPCODE(PackedSubU16,                                        U32,            U32,            U32                                             )
 //OPCODE(PackedSubS16,                                        U32,            U32,            U32                                             )
 //OPCODE(PackedAddSubU16,                                     U32,            U32,            U32                                             )
 //OPCODE(PackedAddSubS16,                                     U32,            U32,            U32                                             )
