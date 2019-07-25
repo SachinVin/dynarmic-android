@@ -1275,10 +1275,9 @@ std::string A32EmitA64::LocationDescriptorToFriendlyName(const IR::LocationDescr
 void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDescriptor initial_location) {
     ASSERT_MSG(A32::LocationDescriptor{terminal.next}.TFlag() == A32::LocationDescriptor{initial_location}.TFlag(), "Unimplemented");
     ASSERT_MSG(A32::LocationDescriptor{terminal.next}.EFlag() == A32::LocationDescriptor{initial_location}.EFlag(), "Unimplemented");
-    ASSERT_MSG(terminal.num_instructions == 1, "Unimplemented");
 
     code.MOVI2R(DecodeReg(code.ABI_PARAM2), A32::LocationDescriptor{terminal.next}.PC());
-    code.MOVI2R(DecodeReg(code.ABI_PARAM3), 1);
+    code.MOVI2R(DecodeReg(code.ABI_PARAM3), terminal.num_instructions);
     code.STR(INDEX_UNSIGNED,DecodeReg(code.ABI_PARAM2), X28, MJitStateReg(A32::Reg::PC));
     code.SwitchMxcsrOnExit();
     Devirtualize<&A32::UserCallbacks::InterpreterFallback>(config.callbacks).EmitCall(code);
