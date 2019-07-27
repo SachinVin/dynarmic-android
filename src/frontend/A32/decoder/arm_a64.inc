@@ -186,8 +186,8 @@ INST(arm_SEL,           "SEL",                 "cccc01101000nnnndddd11111011mmmm
 INST(arm_UBFX,          "UBFX",                "cccc0111111wwwwwddddvvvvv101nnnn") // v6T2
 
 // Unsigned Sum of Absolute Differences instructions
-//INST(arm_USAD8,         "USAD8",               "cccc01111000dddd1111mmmm0001nnnn") // v6
-//INST(arm_USADA8,        "USADA8",              "cccc01111000ddddaaaammmm0001nnnn") // v6
+INST(arm_USAD8,         "USAD8",               "cccc01111000dddd1111mmmm0001nnnn") // v6
+INST(arm_USADA8,        "USADA8",              "cccc01111000ddddaaaammmm0001nnnn") // v6
 
 // Packing instructions
 //INST(arm_PKHBT,         "PKHBT",               "cccc01101000nnnnddddvvvvv001mmmm") // v6K
