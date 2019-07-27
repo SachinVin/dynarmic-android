@@ -182,6 +182,86 @@ void EmitA64::EmitPackedSubS16(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, a);
 }
 
+void EmitA64::EmitPackedHalvingAddU8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UHADD(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+
+}
+
+void EmitA64::EmitPackedHalvingAddU16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UHADD(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedHalvingAddS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SHADD(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedHalvingAddS16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SHADD(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedHalvingSubU8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UHSUB(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedHalvingSubS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SHSUB(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedHalvingSubU16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UHSUB(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedHalvingSubS16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SHSUB(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
 void EmitA64::EmitPackedSaturatedAddU8(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
 
