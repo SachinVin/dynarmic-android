@@ -342,6 +342,18 @@ void EmitA64::EmitPackedSaturatedSubS16(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, a);
 }
 
+void EmitA64::EmitPackedAbsDiffSumS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UABD(B, a, a, b);
+    code.fp_emitter.UADDLV(B, a, a);
+
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
 void EmitA64::EmitPackedSelect(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
 
