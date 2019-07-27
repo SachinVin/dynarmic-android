@@ -32,6 +32,28 @@ void EmitA64::EmitPackedAddU8(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, sum);
 }
 
+void EmitA64::EmitPackedAddS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const auto ge_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetGEFromOp);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    if (ge_inst) {
+        const ARM64Reg ge = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+
+        code.fp_emitter.SQADD(B, ge, a, b);
+        code.fp_emitter.CMGE_zero(B, ge, ge);
+
+        ctx.reg_alloc.DefineValue(ge_inst, ge);
+        ctx.EraseInstruction(ge_inst);
+    }
+
+    code.fp_emitter.ADD(B, a, a, b);
+
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
 void EmitA64::EmitPackedAddU16(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     const auto ge_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetGEFromOp);
@@ -53,6 +75,27 @@ void EmitA64::EmitPackedAddU16(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, sum);
 }
 
+void EmitA64::EmitPackedAddS16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const auto ge_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetGEFromOp);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    if (ge_inst) {
+        const ARM64Reg ge = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+
+        code.fp_emitter.SQADD(H, ge, a, b);
+        code.fp_emitter.CMGE_zero(H, ge, ge);
+
+        ctx.reg_alloc.DefineValue(ge_inst, ge);
+        ctx.EraseInstruction(ge_inst);
+    }
+
+    code.fp_emitter.ADD(H, a, a, b);
+
+    ctx.reg_alloc.DefineValue(inst, a);
+}
 
 void EmitA64::EmitPackedSubU8(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -75,6 +118,27 @@ void EmitA64::EmitPackedSubU8(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, a);
 }
 
+void EmitA64::EmitPackedSubS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const auto ge_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetGEFromOp);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    if (ge_inst) {
+        const ARM64Reg ge = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+
+        code.fp_emitter.SQSUB(B, ge, a, b);
+        code.fp_emitter.CMGE_zero(B, ge, ge);
+
+        ctx.reg_alloc.DefineValue(ge_inst, ge);
+        ctx.EraseInstruction(ge_inst);
+    }
+
+    code.fp_emitter.SUB(B, a, a, b);
+
+    ctx.reg_alloc.DefineValue(inst, a);
+}
 
 void EmitA64::EmitPackedSubU16(EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
@@ -96,4 +160,25 @@ void EmitA64::EmitPackedSubU16(EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.DefineValue(inst, a);
 }
 
+void EmitA64::EmitPackedSubS16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const auto ge_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetGEFromOp);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    if (ge_inst) {
+        const ARM64Reg ge = EncodeRegToDouble(ctx.reg_alloc.ScratchFpr());
+
+        code.fp_emitter.SQSUB(H, ge, a, b);
+        code.fp_emitter.CMGE_zero(H, ge, ge);
+
+        ctx.reg_alloc.DefineValue(ge_inst, ge);
+        ctx.EraseInstruction(ge_inst);
+    }
+
+    code.fp_emitter.SUB(H, a, a, b);
+
+    ctx.reg_alloc.DefineValue(inst, a);
+}
 } // namespace Dynarmic::BackendA64
