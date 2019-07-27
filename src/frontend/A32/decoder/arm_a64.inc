@@ -84,13 +84,13 @@ INST(arm_SXTB,          "SXTB",                "cccc011010101111ddddrr000111mmmm
 INST(arm_SXTB16,        "SXTB16",              "cccc011010001111ddddrr000111mmmm") // v6
 INST(arm_SXTH,          "SXTH",                "cccc011010111111ddddrr000111mmmm") // v6
 INST(arm_SXTAB,         "SXTAB",               "cccc01101010nnnnddddrr000111mmmm") // v6
-//INST(arm_SXTAB16,       "SXTAB16",             "cccc01101000nnnnddddrr000111mmmm") // v6
+INST(arm_SXTAB16,       "SXTAB16",             "cccc01101000nnnnddddrr000111mmmm") // v6
 INST(arm_SXTAH,         "SXTAH",               "cccc01101011nnnnddddrr000111mmmm") // v6
 INST(arm_UXTB,          "UXTB",                "cccc011011101111ddddrr000111mmmm") // v6
 INST(arm_UXTB16,        "UXTB16",              "cccc011011001111ddddrr000111mmmm") // v6
 INST(arm_UXTH,          "UXTH",                "cccc011011111111ddddrr000111mmmm") // v6
 INST(arm_UXTAB,         "UXTAB",               "cccc01101110nnnnddddrr000111mmmm") // v6
-//INST(arm_UXTAB16,       "UXTAB16",             "cccc01101100nnnnddddrr000111mmmm") // v6
+INST(arm_UXTAB16,       "UXTAB16",             "cccc01101100nnnnddddrr000111mmmm") // v6
 INST(arm_UXTAH,         "UXTAH",               "cccc01101111nnnnddddrr000111mmmm") // v6
 
 // Hint instructions
@@ -190,8 +190,8 @@ INST(arm_USAD8,         "USAD8",               "cccc01111000dddd1111mmmm0001nnnn
 INST(arm_USADA8,        "USADA8",              "cccc01111000ddddaaaammmm0001nnnn") // v6
 
 // Packing instructions
-//INST(arm_PKHBT,         "PKHBT",               "cccc01101000nnnnddddvvvvv001mmmm") // v6K
-//INST(arm_PKHTB,         "PKHTB",               "cccc01101000nnnnddddvvvvv101mmmm") // v6K
+INST(arm_PKHBT,         "PKHBT",               "cccc01101000nnnnddddvvvvv001mmmm") // v6K
+INST(arm_PKHTB,         "PKHTB",               "cccc01101000nnnnddddvvvvv101mmmm") // v6K
 
 // Reversal instructions
 INST(arm_RBIT,          "RBIT",                "cccc011011111111dddd11110011mmmm") // v6T2
