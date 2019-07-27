@@ -967,6 +967,8 @@ public:
     void SUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void AND(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void BSL(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void CMGE(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void CMGE_zero(ESize esize, ARM64Reg Rd, ARM64Reg Rn);
     void CMGT(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void CMHI(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void CMHS(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
@@ -997,8 +999,16 @@ public:
     void REV16(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void REV32(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void REV64(u8 size, ARM64Reg Rd, ARM64Reg Rn);
+    void SHADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UHADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SHSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UHSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void SMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void UMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void SCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void UCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void SCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn, int scale);
