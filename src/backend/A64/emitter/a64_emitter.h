@@ -964,6 +964,7 @@ public:
 
     // Vector
     void ADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void ADDV(ESize esize, ARM64Reg Rd, ARM64Reg Rn);
     void SUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void AND(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void BSL(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
@@ -999,6 +1000,10 @@ public:
     void REV16(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void REV32(u8 size, ARM64Reg Rd, ARM64Reg Rn);
     void REV64(u8 size, ARM64Reg Rd, ARM64Reg Rn);
+    void SABD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UABD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SADDLV(ESize esize, ARM64Reg Rd, ARM64Reg Rn);
+    void UADDLV(ESize esize, ARM64Reg Rd, ARM64Reg Rn);
     void SHADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void UHADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     void SHSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
