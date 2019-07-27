@@ -2851,6 +2851,14 @@ void ARM64FloatEmitter::AND(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
 void ARM64FloatEmitter::BSL(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
     EmitThreeSame(1, 1, 3, Rd, Rn, Rm);
 }
+void ARM64FloatEmitter::CMGE(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b00111, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::CMGE_zero(ESize esize, ARM64Reg Rd, ARM64Reg Rn) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    Emit2RegMisc(IsQuad(Rd), 1, static_cast<u32>(esize), 0b1000, Rd, Rn);
+}
 void ARM64FloatEmitter::CMGT(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
     ASSERT(!(IsDouble(Rd) && esize == D));
     EmitThreeSame(0, static_cast<u32>(esize), 0b00110, Rd, Rn, Rm);
@@ -2948,6 +2956,22 @@ void ARM64FloatEmitter::REV32(u8 size, ARM64Reg Rd, ARM64Reg Rn) {
 void ARM64FloatEmitter::REV64(u8 size, ARM64Reg Rd, ARM64Reg Rn) {
     Emit2RegMisc(IsQuad(Rd), 0, size >> 4, 0, Rd, Rn);
 }
+void ARM64FloatEmitter::SHADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b0, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UHADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b0, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::SHSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b00100, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UHSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b00100, Rd, Rn, Rm);
+}
 void ARM64FloatEmitter::SMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
     ASSERT(!(IsDouble(Rd) && esize == D));
     EmitThreeSame(0, static_cast<u32>(esize), 0b01101, Rd, Rn, Rm);
@@ -2955,6 +2979,22 @@ void ARM64FloatEmitter::SMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm)
 void ARM64FloatEmitter::UMIN(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
     ASSERT(!(IsDouble(Rd) && esize == D));
     EmitThreeSame(1, static_cast<u32>(esize), 0b01101, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::SQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b00001, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::SQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(0, static_cast<u32>(esize), 0b00101, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b00001, Rd, Rn, Rm);
+}
+void ARM64FloatEmitter::UQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    ASSERT(!(IsDouble(Rd) && esize == D));
+    EmitThreeSame(1, static_cast<u32>(esize), 0b00101, Rd, Rn, Rm);
 }
 void ARM64FloatEmitter::SCVTF(u8 size, ARM64Reg Rd, ARM64Reg Rn) {
     Emit2RegMisc(IsQuad(Rd), 0, size >> 6, 0x1D, Rd, Rn);
