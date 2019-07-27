@@ -213,7 +213,7 @@ OPCODE(PackedSaturatedAddS16,                               U32,            U32,
 OPCODE(PackedSaturatedSubU16,                               U32,            U32,            U32                                             )
 OPCODE(PackedSaturatedSubS16,                               U32,            U32,            U32                                             )
 //OPCODE(PackedAbsDiffSumS8,                                  U32,            U32,            U32                                             )
-//OPCODE(PackedSelect,                                        U32,            U32,            U32,            U32                             )
+OPCODE(PackedSelect,                                        U32,            U32,            U32,            U32                             )
 
 // CRC instructions
 //OPCODE(CRC32Castagnoli8,                                    U32,            U32,            U32                                             )
