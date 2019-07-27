@@ -954,10 +954,10 @@ public:
     void FNMSUB(ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm, ARM64Reg Ra);
 
     // Scalar three same
-    void SQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
-    void UQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
-    void SQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
-    void UQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SQADD(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UQADD(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void SQSUB(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
+    void UQSUB(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm);
     
     // Scalar floating point immediate
     void FMOV(ARM64Reg Rd, uint8_t imm8);
