@@ -244,16 +244,16 @@ INST(arm_SMUAD,         "SMUAD",               "cccc01110000dddd1111mmmm00M1nnnn
 INST(arm_SMUSD,         "SMUSD",               "cccc01110000dddd1111mmmm01M1nnnn") // v6
 
 // Parallel Add/Subtract (Modulo) instructions
-//INST(arm_SASX,          "SASX",                "cccc01100001nnnndddd11110011mmmm") // v6
-//INST(arm_SSAX,          "SSAX",                "cccc01100001nnnndddd11110101mmmm") // v6
+INST(arm_SASX,          "SASX",                "cccc01100001nnnndddd11110011mmmm") // v6
+INST(arm_SSAX,          "SSAX",                "cccc01100001nnnndddd11110101mmmm") // v6
 INST(arm_SADD8,         "SADD8",               "cccc01100001nnnndddd11111001mmmm") // v6
 INST(arm_SADD16,        "SADD16",              "cccc01100001nnnndddd11110001mmmm") // v6
 INST(arm_SSUB8,         "SSUB8",               "cccc01100001nnnndddd11111111mmmm") // v6
 INST(arm_SSUB16,        "SSUB16",              "cccc01100001nnnndddd11110111mmmm") // v6
 INST(arm_UADD8,         "UADD8",               "cccc01100101nnnndddd11111001mmmm") // v6
 INST(arm_UADD16,        "UADD16",              "cccc01100101nnnndddd11110001mmmm") // v6
-//INST(arm_UASX,          "UASX",                "cccc01100101nnnndddd11110011mmmm") // v6
-//INST(arm_USAX,          "USAX",                "cccc01100101nnnndddd11110101mmmm") // v6
+INST(arm_UASX,          "UASX",                "cccc01100101nnnndddd11110011mmmm") // v6
+INST(arm_USAX,          "USAX",                "cccc01100101nnnndddd11110101mmmm") // v6
 INST(arm_USUB8,         "USUB8",               "cccc01100101nnnndddd11111111mmmm") // v6
 INST(arm_USUB16,        "USUB16",              "cccc01100101nnnndddd11110111mmmm") // v6
 
@@ -272,10 +272,10 @@ INST(arm_UQSUB8,        "UQSUB8",              "cccc01100110nnnndddd11111111mmmm
 INST(arm_UQSUB16,       "UQSUB16",             "cccc01100110nnnndddd11110111mmmm") // v6
 
 // Parallel Add/Subtract (Halving) instructions
-//INST(arm_SHASX,         "SHASX",               "cccc01100011nnnndddd11110011mmmm") // v6
-//INST(arm_SHSAX,         "SHSAX",               "cccc01100011nnnndddd11110101mmmm") // v6
-//INST(arm_UHASX,         "UHASX",               "cccc01100111nnnndddd11110011mmmm") // v6
-//INST(arm_UHSAX,         "UHSAX",               "cccc01100111nnnndddd11110101mmmm") // v6
+INST(arm_SHASX,         "SHASX",               "cccc01100011nnnndddd11110011mmmm") // v6
+INST(arm_SHSAX,         "SHSAX",               "cccc01100011nnnndddd11110101mmmm") // v6
+INST(arm_UHASX,         "UHASX",               "cccc01100111nnnndddd11110011mmmm") // v6
+INST(arm_UHSAX,         "UHSAX",               "cccc01100111nnnndddd11110101mmmm") // v6
 INST(arm_SHADD8,        "SHADD8",              "cccc01100011nnnndddd11111001mmmm") // v6
 INST(arm_SHADD16,       "SHADD16",             "cccc01100011nnnndddd11110001mmmm") // v6
 INST(arm_SHSUB8,        "SHSUB8",              "cccc01100011nnnndddd11111111mmmm") // v6
