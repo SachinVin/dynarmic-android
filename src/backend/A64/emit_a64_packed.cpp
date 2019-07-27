@@ -181,4 +181,84 @@ void EmitA64::EmitPackedSubS16(EmitContext& ctx, IR::Inst* inst) {
 
     ctx.reg_alloc.DefineValue(inst, a);
 }
+
+void EmitA64::EmitPackedSaturatedAddU8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UQADD(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedAddS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SQADD(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedSubU8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UQSUB(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedSubS8(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SQSUB(B, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedAddU16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UQADD(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedAddS16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SQADD(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedSubU16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.UQSUB(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
+
+void EmitA64::EmitPackedSaturatedSubS16(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    code.fp_emitter.SQSUB(H, a, a, b);
+    ctx.reg_alloc.DefineValue(inst, a);
+}
 } // namespace Dynarmic::BackendA64

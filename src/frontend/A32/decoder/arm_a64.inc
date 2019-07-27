@@ -258,18 +258,18 @@ INST(arm_USUB8,         "USUB8",               "cccc01100101nnnndddd11111111mmmm
 INST(arm_USUB16,        "USUB16",              "cccc01100101nnnndddd11110111mmmm") // v6
 
 // Parallel Add/Subtract (Saturating) instructions
-//INST(arm_QADD8,         "QADD8",               "cccc01100010nnnndddd11111001mmmm") // v6
-//INST(arm_QADD16,        "QADD16",              "cccc01100010nnnndddd11110001mmmm") // v6
+INST(arm_QADD8,         "QADD8",               "cccc01100010nnnndddd11111001mmmm") // v6
+INST(arm_QADD16,        "QADD16",              "cccc01100010nnnndddd11110001mmmm") // v6
 //INST(arm_QASX,          "QASX",                "cccc01100010nnnndddd11110011mmmm") // v6
 //INST(arm_QSAX,          "QSAX",                "cccc01100010nnnndddd11110101mmmm") // v6
-//INST(arm_QSUB8,         "QSUB8",               "cccc01100010nnnndddd11111111mmmm") // v6
-//INST(arm_QSUB16,        "QSUB16",              "cccc01100010nnnndddd11110111mmmm") // v6
-//INST(arm_UQADD8,        "UQADD8",              "cccc01100110nnnndddd11111001mmmm") // v6
-//INST(arm_UQADD16,       "UQADD16",             "cccc01100110nnnndddd11110001mmmm") // v6
+INST(arm_QSUB8,         "QSUB8",               "cccc01100010nnnndddd11111111mmmm") // v6
+INST(arm_QSUB16,        "QSUB16",              "cccc01100010nnnndddd11110111mmmm") // v6
+INST(arm_UQADD8,        "UQADD8",              "cccc01100110nnnndddd11111001mmmm") // v6
+INST(arm_UQADD16,       "UQADD16",             "cccc01100110nnnndddd11110001mmmm") // v6
 //INST(arm_UQASX,         "UQASX",               "cccc01100110nnnndddd11110011mmmm") // v6
 //INST(arm_UQSAX,         "UQSAX",               "cccc01100110nnnndddd11110101mmmm") // v6
-//INST(arm_UQSUB8,        "UQSUB8",              "cccc01100110nnnndddd11111111mmmm") // v6
-//INST(arm_UQSUB16,       "UQSUB16",             "cccc01100110nnnndddd11110111mmmm") // v6
+INST(arm_UQSUB8,        "UQSUB8",              "cccc01100110nnnndddd11111111mmmm") // v6
+INST(arm_UQSUB16,       "UQSUB16",             "cccc01100110nnnndddd11110111mmmm") // v6
 
 // Parallel Add/Subtract (Halving) instructions
 //INST(arm_SHADD8,        "SHADD8",              "cccc01100011nnnndddd11111001mmmm") // v6
