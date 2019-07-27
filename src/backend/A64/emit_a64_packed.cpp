@@ -341,4 +341,17 @@ void EmitA64::EmitPackedSaturatedSubS16(EmitContext& ctx, IR::Inst* inst) {
     code.fp_emitter.SQSUB(H, a, a, b);
     ctx.reg_alloc.DefineValue(inst, a);
 }
+
+void EmitA64::EmitPackedSelect(EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    const ARM64Reg ge = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+    const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[2]));
+
+    code.fp_emitter.BSL(ge, b, a);
+
+    ctx.reg_alloc.DefineValue(inst, ge);
+}
+
 } // namespace Dynarmic::BackendA64
