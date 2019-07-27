@@ -1998,8 +1998,27 @@ void ARM64FloatEmitter::EmitScalarThreeSame(bool U, u32 size, u32 opcode, ARM64R
     Rd = DecodeReg(Rd);
     Rn = DecodeReg(Rn);
     Rm = DecodeReg(Rm);
+    int esize = 0;
+    switch (size) {
+    case 8:
+        esize = 0;
+        break;
+    case 16:
+        esize = 1;
+        break;
+    case 32:
+        esize = 2;
+        break;
+    case 64:
+        esize = 3;
+        break;
+    default:
+        ASSERT_MSG(false, "Size must be 8, 16, 32, or 64");
+        break;
+    }
 
-    Write32((U << 29) | (0b1011110001 << 21) | (size << 22) | (Rm << 16) |
+
+    Write32((U << 29) | (0b1011110001 << 21) | (esize << 22) | (Rm << 16) |
             (opcode << 11) | (1 << 10) | (Rn << 5) | Rd);
 }
 
@@ -2799,17 +2818,17 @@ void ARM64FloatEmitter::EmitScalar3Source(bool isDouble, ARM64Reg Rd, ARM64Reg R
 }
 
 // Scalar three same
-void ARM64FloatEmitter::SQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
-    EmitScalarThreeSame(0, static_cast<u32>(esize), 0b000011, Rd, Rn, Rm);
+void ARM64FloatEmitter::SQADD(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(0, size, 0b00001, Rd, Rn, Rm);
 }
-void ARM64FloatEmitter::SQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
-    EmitScalarThreeSame(0, static_cast<u32>(esize), 0b001011, Rd, Rn, Rm);
+void ARM64FloatEmitter::SQSUB(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(0, size, 0b00101, Rd, Rn, Rm);
 }
-void ARM64FloatEmitter::UQADD(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
-    EmitScalarThreeSame(1, static_cast<u32>(esize), 0b000011, Rd, Rn, Rm);
+void ARM64FloatEmitter::UQADD(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(1, size, 0b00001, Rd, Rn, Rm);
 }
-void ARM64FloatEmitter::UQSUB(ESize esize, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
-    EmitScalarThreeSame(1, static_cast<u32>(esize), 0b001011, Rd, Rn, Rm);
+void ARM64FloatEmitter::UQSUB(u8 size, ARM64Reg Rd, ARM64Reg Rn, ARM64Reg Rm) {
+    EmitScalarThreeSame(1, size, 0b00101, Rd, Rn, Rm);
 }
 
 // Scalar floating point immediate
