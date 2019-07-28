@@ -2,5 +2,6 @@
 build/
 build-*/
 docs/Doxygen/
+.vs/
 # Generated files
 src/backend/x64/mig/
