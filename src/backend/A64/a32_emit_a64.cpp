@@ -393,31 +393,11 @@ static u32 GetCpsrImpl(A32JitState* jit_state) {
 }
 
 void A32EmitA64::EmitA32GetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
-    //if (code.DoesCpuSupport(Xbyak::util::Cpu::tBMI2)) {
-    //    Xbyak::Reg32 result = ctx.reg_alloc.ScratchGpr().cvt32();
-    //    Xbyak::Reg32 tmp = ctx.reg_alloc.ScratchGpr().cvt32();
+    // TODO:Inline
+    ctx.reg_alloc.HostCall(inst);
+    code.MOV(code.ABI_PARAM1, X28);
+    code.QuickCallFunction(&GetCpsrImpl);
 
-    //    // Here we observe that CPSR_et and CPSR_ge are right next to each other in memory,
-    //    // so we load them both at the same time with one 64-bit read. This allows us to
-    //    // extract all of their bits together at once with one pext.
-    //    static_assert(offsetof(A32JitState, CPSR_et) + 4 == offsetof(A32JitState, CPSR_ge));
-    //    code.mov(result.cvt64(), qword[r15 + offsetof(A32JitState, CPSR_et)]);
-    //    code.mov(tmp.cvt64(), 0x80808080'00000003ull);
-    //    code.pext(result.cvt64(), result.cvt64(), tmp.cvt64());
-    //    code.mov(tmp, 0x000f0220);
-    //    code.pdep(result, result, tmp);
-    //    code.mov(tmp, dword[r15 + offsetof(A32JitState, CPSR_q)]);
-    //    code.shl(tmp, 27);
-    //    code.or_(result, tmp);
-    //    code.or_(result, dword[r15 + offsetof(A32JitState, CPSR_nzcv)]);
-    //    code.or_(result, dword[r15 + offsetof(A32JitState, CPSR_jaifm)]);
-
-    //    ctx.reg_alloc.DefineValue(inst, result);
-    //} else {
-        ctx.reg_alloc.HostCall(inst);
-        code.MOV(code.ABI_PARAM1, X28);
-        code.QuickCallFunction(&GetCpsrImpl);
-    //}
 }
 
 static void SetCpsrImpl(u32 value, A32JitState* jit_state) {
@@ -426,43 +406,12 @@ static void SetCpsrImpl(u32 value, A32JitState* jit_state) {
 
 void A32EmitA64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    
+    // TODO:Inline
+    ctx.reg_alloc.HostCall(nullptr, args[0]);
+    code.MOV(code.ABI_PARAM2, X28);
+    code.QuickCallFunction(&SetCpsrImpl);
 
-    //if (code.DoesCpuSupport(Xbyak::util::Cpu::tBMI2)) {
-    //    Xbyak::Reg32 cpsr = ctx.reg_alloc.UseScratchGpr(args[0]).cvt32();
-    //    Xbyak::Reg32 tmp = ctx.reg_alloc.ScratchGpr().cvt32();
-    //    Xbyak::Reg32 tmp2 = ctx.reg_alloc.ScratchGpr().cvt32();
-
-    //    // CPSR_q
-    //    code.bt(cpsr, 27);
-    //    code.setc(code.byte[r15 + offsetof(A32JitState, CPSR_q)]);
-
-    //    // CPSR_nzcv
-    //    code.mov(tmp, cpsr);
-    //    code.and_(tmp, 0xF0000000);
-    //    code.mov(dword[r15 + offsetof(A32JitState, CPSR_nzcv)], tmp);
-
-    //    // CPSR_jaifm
-    //    code.mov(tmp, cpsr);
-    //    code.and_(tmp, 0x07F0FDDF);
-    //    code.mov(dword[r15 + offsetof(A32JitState, CPSR_jaifm)], tmp);
-
-    //    // CPSR_et and CPSR_ge
-    //    static_assert(offsetof(A32JitState, CPSR_et) + 4 == offsetof(A32JitState, CPSR_ge));
-    //    code.mov(tmp, 0x000f0220);
-    //    code.pext(cpsr, cpsr, tmp);
-    //    code.mov(tmp.cvt64(), 0x01010101'00000003ull);
-    //    code.pdep(cpsr.cvt64(), cpsr.cvt64(), tmp.cvt64());
-    //    // We perform SWAR partitioned subtraction here, to negate the GE bytes.
-    //    code.mov(tmp.cvt64(), 0x80808080'00000003ull);
-    //    code.mov(tmp2.cvt64(), tmp.cvt64());
-    //    code.sub(tmp.cvt64(), cpsr.cvt64());
-    //    code.xor_(tmp.cvt64(), tmp2.cvt64());
-    //    code.mov(qword[r15 + offsetof(A32JitState, CPSR_et)], tmp.cvt64());
-    //} else {
-        ctx.reg_alloc.HostCall(nullptr, args[0]);
-        code.MOV(code.ABI_PARAM2, X28);
-        code.QuickCallFunction(&SetCpsrImpl);
-    //}
 }
 
 void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
