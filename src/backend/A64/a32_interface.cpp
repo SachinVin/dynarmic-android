@@ -137,7 +137,7 @@ private:
 
         IR::Block ir_block =
             A32::Translate(A32::LocationDescriptor{descriptor}, [this](u32 vaddr) { return config.callbacks->MemoryReadCode(vaddr); },
-                           {config.define_unpredictable_behaviour});
+                           {config.define_unpredictable_behaviour, config.hook_hint_instructions});
         Optimization::A32GetSetElimination(ir_block);
         Optimization::DeadCodeElimination(ir_block);
         Optimization::A32ConstantMemoryReads(ir_block, config.callbacks);
