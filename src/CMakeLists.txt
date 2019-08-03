@@ -329,7 +329,50 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/emitter/a64_emitter.h
          backend/A64/emitter/arm_common.h
          backend/A64/emitter/code_block.h
+         backend/A64/a32_emit_a64.cpp
+         backend/A64/a32_emit_a64.h		 
+         backend/A64/a32_interface.cpp
+         backend/A64/a32_jitstate.cpp
+         backend/A64/a32_jitstate.h
+         # backend/A64/a64_emit_a64.cpp
+         # backend/A64/a64_emit_a64.h
+         # backend/A64/a64_exclusive_monitor.cpp
+         # backend/A64/a64_interface.cpp
+         # backend/A64/a64_jitstate.cpp
+         # backend/A64/a64_jitstate.h
+         backend/A64/abi.cpp
+         backend/A64/abi.h
+         backend/A64/block_of_code.cpp
+         backend/A64/block_of_code.h
+         backend/A64/block_range_information.cpp
+         backend/A64/block_range_information.h
+         backend/A64/callback.cpp
+         backend/A64/callback.h
+         backend/A64/constant_pool.cpp
+         backend/A64/constant_pool.h
+         backend/A64/devirtualize.h
+         backend/A64/emit_a64.cpp
+         backend/A64/emit_a64.h
+         # backend/A64/emit_a64_aes.cpp
+         # backend/A64/emit_a64_crc32.cpp
+         # backend/A64/emit_a64_data_processing.cpp
+         # backend/A64/emit_a64_floating_point.cpp
+         # backend/A64/emit_a64_packed.cpp
+         # backend/A64/emit_a64_saturation.cpp
+         # backend/A64/emit_a64_sm4.cpp
+         # backend/A64/emit_a64_vector.cpp
+         # backend/A64/emit_a64_vector_floating_point.cpp
+         backend/A64/hostloc.cpp
+         backend/A64/hostloc.h
          backend/A64/jitstate_info.h
+         # backend/A64/oparg.h
+         backend/A64/opcodes.inc
+         backend/A64/perf_map.cpp
+         backend/A64/perf_map.h
+         backend/A64/reg_alloc.cpp
+         backend/A64/reg_alloc.h
+
+         backend/A64/exception_handler_generic.cpp
     )
 else()
     message(FATAL_ERROR "Unsupported architecture")
