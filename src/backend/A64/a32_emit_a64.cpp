@@ -409,6 +409,11 @@ void A32EmitA64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     
     // TODO:Inline
     ctx.reg_alloc.HostCall(nullptr, args[0]);
+    
+    if (config.always_little_endian) {
+        code.ANDI2R(code.ABI_PARAM1, code.ABI_PARAM1, 0xFFFFFDFF);
+    }
+
     code.MOV(code.ABI_PARAM2, X28);
     code.QuickCallFunction(&SetCpsrImpl);
 
