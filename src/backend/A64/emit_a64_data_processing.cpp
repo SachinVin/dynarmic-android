@@ -749,7 +749,7 @@ static void EmitAdd(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bit
                 code.ADCS(result, result, op_arg);
             } else {
                 u32 op_arg = args[1].GetImmediateU32();
-                code.ADDSI2R(result, result, op_arg, code.ABI_SCRATCH1);
+                code.ADDSI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
             }
         } else {
             Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
@@ -820,7 +820,7 @@ static void EmitSub(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bit
         if (carry_in.IsImmediate()) {
             if (carry_in.GetImmediateU1()) {
                 u32 op_arg = args[1].GetImmediateU32();
-                code.SUBSI2R(result, result, op_arg, code.ABI_SCRATCH1);
+                code.SUBSI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
             } else {
                 Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
 
@@ -945,7 +945,7 @@ void EmitA64::EmitAnd32(EmitContext& ctx, IR::Inst* inst) {
 
     if (args[1].IsImmediate()) {
         u32 op_arg = args[1].GetImmediateU32();
-        code.ANDI2R(result, result, op_arg, code.ABI_SCRATCH1);
+        code.ANDI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
     } else {
         Arm64Gen::ARM64Reg op_arg = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));    
         code.AND(result, result, op_arg);
@@ -961,7 +961,7 @@ void EmitA64::EmitAnd64(EmitContext& ctx, IR::Inst* inst) {
 
     if (args[1].IsImmediate()) {
         u32 op_arg = args[1].GetImmediateU32();
-        code.ANDI2R(result, result, op_arg, code.ABI_SCRATCH1);
+        code.ANDI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
     }
     else {
         Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
@@ -978,7 +978,7 @@ void EmitA64::EmitEor32(EmitContext& ctx, IR::Inst* inst) {
 
     if (args[1].IsImmediate()) {
         u32 op_arg = args[1].GetImmediateU32();
-        code.EORI2R(result, result, op_arg, code.ABI_SCRATCH1);
+        code.EORI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
     } else {
         Arm64Gen::ARM64Reg op_arg = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
         code.EOR(result, result, op_arg);
@@ -994,7 +994,7 @@ void EmitA64::EmitEor64(EmitContext& ctx, IR::Inst* inst) {
 
     if (args[1].IsImmediate()) {
         u32 op_arg = args[1].GetImmediateU32();
-        code.EORI2R(result, result, op_arg, code.ABI_SCRATCH1);
+        code.EORI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
     }
     else {
         Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
@@ -1011,7 +1011,7 @@ void EmitA64::EmitOr32(EmitContext& ctx, IR::Inst* inst) {
 
     if (args[1].IsImmediate()) {
         u32 op_arg = args[1].GetImmediateU32();
-        code.ORRI2R(result, result, op_arg, code.ABI_SCRATCH1);
+        code.ORRI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
     } else {
         Arm64Gen::ARM64Reg op_arg = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
         code.ORR(result, result , op_arg);
@@ -1027,7 +1027,7 @@ void EmitA64::EmitOr64(EmitContext& ctx, IR::Inst* inst) {
 
     if (args[1].IsImmediate()) {
         u32 op_arg = args[1].GetImmediateU32();
-        code.ORRI2R(result, result, op_arg, code.ABI_SCRATCH1);
+        code.ORRI2R(result, result, op_arg, ctx.reg_alloc.ScratchGpr());
     }
     else {
         Arm64Gen::ARM64Reg op_arg = ctx.reg_alloc.UseGpr(args[1]);
