@@ -306,7 +306,6 @@ void A32EmitA64::GenTerminalHandlers() {
         code.ANDI2R(fast_dispatch_entry_reg, fast_dispatch_entry_reg, fast_dispatch_table_mask);
         code.ADD(fast_dispatch_entry_reg, fast_dispatch_entry_reg, code.ABI_SCRATCH1);        
         
-        // code.cmp(location_descriptor_reg, qword[fast_dispatch_entry_reg + offsetof(FastDispatchEntry, location_descriptor)]);
         code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, fast_dispatch_entry_reg, offsetof(FastDispatchEntry, location_descriptor));
         code.CMP(location_descriptor_reg, code.ABI_SCRATCH1);
         fast_dispatch_cache_miss = code.B(CC_NEQ);
@@ -397,7 +396,6 @@ void A32EmitA64::EmitA32GetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(inst);
     code.MOV(code.ABI_PARAM1, X28);
     code.QuickCallFunction(&GetCpsrImpl);
-
 }
 
 static void SetCpsrImpl(u32 value, A32JitState* jit_state) {
@@ -416,7 +414,6 @@ void A32EmitA64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
 
     code.MOV(code.ABI_PARAM2, X28);
     code.QuickCallFunction(&SetCpsrImpl);
-
 }
 
 void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
@@ -425,7 +422,6 @@ void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
 
     code.ANDI2R(a, a, 0xF0000000);
     code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_nzcv));
-
 }
 
 void A32EmitA64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {
@@ -686,7 +682,7 @@ void A32EmitA64::EmitA32CallSupervisor(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(nullptr);
     ARM64Reg cycles_remaining = ctx.reg_alloc.ScratchGpr();
 
-    code.SwitchMxcsrOnExit();
+    code.SwitchFpscrOnExit();
     code.LDR(INDEX_UNSIGNED, code.ABI_PARAM2, X28, offsetof(A32JitState, cycles_to_run));
     code.LDR(INDEX_UNSIGNED, cycles_remaining, X28, offsetof(A32JitState, cycles_remaining));
     code.SUB(code.ABI_PARAM2, code.ABI_PARAM2, cycles_remaining);
@@ -699,7 +695,7 @@ void A32EmitA64::EmitA32CallSupervisor(A32EmitContext& ctx, IR::Inst* inst) {
     Devirtualize<&A32::UserCallbacks::GetTicksRemaining>(config.callbacks).EmitCall(code);
     code.STR(INDEX_UNSIGNED, code.ABI_RETURN, X28, offsetof(A32JitState, cycles_to_run));
     code.STR(INDEX_UNSIGNED, code.ABI_RETURN, X28, offsetof(A32JitState, cycles_remaining));
-    code.SwitchMxcsrOnEntry();
+    code.SwitchFpscrOnEntry();
 }
 
 void A32EmitA64::EmitA32ExceptionRaised(A32EmitContext& ctx, IR::Inst* inst) {
@@ -1243,7 +1239,7 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDesc
     code.MOVI2R(DecodeReg(code.ABI_PARAM2), A32::LocationDescriptor{terminal.next}.PC());
     code.MOVI2R(DecodeReg(code.ABI_PARAM3), terminal.num_instructions);
     code.STR(INDEX_UNSIGNED,DecodeReg(code.ABI_PARAM2), X28, MJitStateReg(A32::Reg::PC));
-    code.SwitchMxcsrOnExit();
+    code.SwitchFpscrOnExit();
     Devirtualize<&A32::UserCallbacks::InterpreterFallback>(config.callbacks).EmitCall(code);
     code.ReturnFromRunCode(true); // TODO: Check cycles
 }
