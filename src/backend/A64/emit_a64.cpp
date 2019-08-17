@@ -137,11 +137,12 @@ void EmitA64::EmitNZCVFromPackedFlags(EmitContext& ctx, IR::Inst* inst) {
         ctx.reg_alloc.DefineValue(inst, nzcv);
     } else {
         Arm64Gen::ARM64Reg nzcv = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+        Arm64Gen::ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
         // TODO: Optimize
         code.LSR(nzcv, nzcv, 28);
-        code.MOVI2R(code.ABI_SCRATCH1, 0b00010000'10000001);
-        code.MUL(nzcv, nzcv, code.ABI_SCRATCH1);
-        code.ANDI2R(nzcv,nzcv, 1, code.ABI_SCRATCH1);
+        code.MOVI2R(scratch, 0b00010000'10000001);
+        code.MUL(nzcv, nzcv, scratch);
+        code.ANDI2R(nzcv, nzcv, 1, scratch);
         ctx.reg_alloc.DefineValue(inst, nzcv);
     }
 }
