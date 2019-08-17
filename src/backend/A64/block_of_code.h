@@ -48,13 +48,13 @@ public:
     /// Runs emulated code from code_ptr.
     void RunCodeFrom(void* jit_state, CodePtr code_ptr) const;
     /// Code emitter: Returns to dispatcher
-    void ReturnFromRunCode(bool mxcsr_already_exited = false);
+    void ReturnFromRunCode(bool fpscr_already_exited = false);
     /// Code emitter: Returns to dispatcher, forces return to host
-    void ForceReturnFromRunCode(bool mxcsr_already_exited = false);
-    /// Code emitter: Makes guest MXCSR the current MXCSR
-    void SwitchMxcsrOnEntry();
-    /// Code emitter: Makes saved host MXCSR the current MXCSR
-    void SwitchMxcsrOnExit();
+    void ForceReturnFromRunCode(bool fpscr_already_exited = false);
+    /// Code emitter: Makes guest FPSR and FPCR the current FPSR and FPCR
+    void SwitchFpscrOnEntry();
+    /// Code emitter: Makes saved host FPCR the current FPCR
+    void SwitchFpscrOnExit();
     /// Code emitter: Updates cycles remaining my calling cb.AddTicks and cb.GetTicksRemaining
     /// @note this clobbers ABI caller-save registers
     void UpdateTicks();
@@ -132,7 +132,7 @@ private:
     using RunCodeFromFuncType = void(*)(void*, CodePtr);
     RunCodeFuncType run_code = nullptr;
     RunCodeFromFuncType run_code_from = nullptr;
-    static constexpr size_t MXCSR_ALREADY_EXITED = 1 << 0;
+    static constexpr size_t FPSCR_ALREADY_EXITED = 1 << 0;
     static constexpr size_t FORCE_RETURN = 1 << 1;
     std::array<const void*, 4> return_from_run_code;
     void GenRunCode();
