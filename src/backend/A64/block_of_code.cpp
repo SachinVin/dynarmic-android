@@ -134,22 +134,22 @@ void BlockOfCode::RunCodeFrom(void* jit_state, CodePtr code_ptr) const {
     run_code_from(jit_state, code_ptr);
 }
 
-void BlockOfCode::ReturnFromRunCode(bool mxcsr_already_exited) {
+void BlockOfCode::ReturnFromRunCode(bool fpscr_already_exited) {
     size_t index = 0;
-    if (mxcsr_already_exited)
-        index |= MXCSR_ALREADY_EXITED;
+    if (fpscr_already_exited)
+        index |= FPSCR_ALREADY_EXITED;
     B(return_from_run_code[index]);
 }
 
-void BlockOfCode::ForceReturnFromRunCode(bool mxcsr_already_exited) {
+void BlockOfCode::ForceReturnFromRunCode(bool fpscr_already_exited) {
     size_t index = FORCE_RETURN;
-    if (mxcsr_already_exited)
-        index |= MXCSR_ALREADY_EXITED; //TODO: refactor to fpcr
+    if (fpscr_already_exited)
+        index |= FPSCR_ALREADY_EXITED;
     B(return_from_run_code[index]);
 }
 
 void BlockOfCode::GenRunCode() {
-    const u8* loop, *enter_mxcsr_then_loop;
+    const u8* loop, *enter_fpscr_then_loop;
 
     run_code_from = (RunCodeFromFuncType) const_cast<u8*>(AlignCode16());
 
@@ -163,7 +163,7 @@ void BlockOfCode::GenRunCode() {
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
 
-    SwitchMxcsrOnEntry();
+    SwitchFpscrOnEntry();
     BR(Arm64Gen::X27);
 
     run_code = (RunCodeFuncType) const_cast<u8*>(AlignCode16());
@@ -180,23 +180,23 @@ void BlockOfCode::GenRunCode() {
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
 
-    enter_mxcsr_then_loop = GetCodePtr();
-    SwitchMxcsrOnEntry();
+    enter_fpscr_then_loop = GetCodePtr();
+    SwitchFpscrOnEntry();
     loop = GetCodePtr();
 
     cb.LookupBlock->EmitCall(*this);
     BR(ABI_RETURN);    
 
     // Return from run code variants
-    const auto emit_return_from_run_code = [this, &loop, &enter_mxcsr_then_loop](bool mxcsr_already_exited, bool force_return){
+    const auto emit_return_from_run_code = [this, &loop, &enter_fpscr_then_loop](bool fpscr_already_exited, bool force_return){
         if (!force_return) {
             LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
             CMP(ABI_SCRATCH1, Arm64Gen::ZR);
-            B(CC_GT, mxcsr_already_exited ? enter_mxcsr_then_loop : loop);
+            B(CC_GT, fpscr_already_exited ? enter_fpscr_then_loop : loop);
         }
 
-        if (!mxcsr_already_exited) {
-            SwitchMxcsrOnExit();
+        if (!fpscr_already_exited) {
+            SwitchFpscrOnExit();
         }
 
         cb.AddTicks->EmitCall(*this, [this](RegList param) {
@@ -212,19 +212,19 @@ void BlockOfCode::GenRunCode() {
     return_from_run_code[0] = AlignCode16();
     emit_return_from_run_code(false, false);
 
-    return_from_run_code[MXCSR_ALREADY_EXITED] = AlignCode16();
+    return_from_run_code[FPSCR_ALREADY_EXITED] = AlignCode16();
     emit_return_from_run_code(true, false);
 
     return_from_run_code[FORCE_RETURN] = AlignCode16();
     emit_return_from_run_code(false, true);
 
-    return_from_run_code[MXCSR_ALREADY_EXITED | FORCE_RETURN] = AlignCode16();
+    return_from_run_code[FPSCR_ALREADY_EXITED | FORCE_RETURN] = AlignCode16();
     emit_return_from_run_code(true, true);
 
     PerfMapRegister(run_code_from, GetCodePtr(), "dynarmic_dispatcher");
 }
 
-void BlockOfCode::SwitchMxcsrOnEntry() {
+void BlockOfCode::SwitchFpscrOnEntry() {
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPCR);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_save_host_FPCR);
     
@@ -234,7 +234,7 @@ void BlockOfCode::SwitchMxcsrOnEntry() {
     _MSR(Arm64Gen::FIELD_FPSR, ABI_SCRATCH1);    
 }
 
-void BlockOfCode::SwitchMxcsrOnExit() {
+void BlockOfCode::SwitchFpscrOnExit() {
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPCR);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPCR);
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPSR);
