@@ -575,10 +575,11 @@ void A32EmitA64::EmitA32OrQFlag(A32EmitContext& ctx, IR::Inst* inst) {
         }
     } else {
         ARM64Reg to_store = ctx.reg_alloc.UseGpr(args[0]);
+        ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-        code.LDR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_q));
-        code.ORR(code.ABI_SCRATCH1, code.ABI_SCRATCH1, to_store);
-        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_q));
+        code.LDR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, CPSR_q));
+        code.ORR(scratch, scratch, to_store);
+        code.STR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, CPSR_q));
     }
 }
 
@@ -603,6 +604,7 @@ void A32EmitA64::EmitA32SetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
 void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     if (args[0].IsImmediate()) {
+        ARM64Reg to_store = DecodeReg(ctx.reg_alloc.ScratchGpr());
         u32 imm = args[0].GetImmediateU32();
         u32 ge = 0;
         ge |= Common::Bit<19>(imm) ? 0xFF000000 : 0;
@@ -610,18 +612,19 @@ void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst
         ge |= Common::Bit<17>(imm) ? 0x0000FF00 : 0;
         ge |= Common::Bit<16>(imm) ? 0x000000FF : 0;
 
-        code.MOVI2R(code.ABI_SCRATCH1, ge);
-        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_ge));
+        code.MOVI2R(to_store, ge);
+        code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, CPSR_ge));
     } else {
         ARM64Reg a = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+        ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
         code.LSR(a, a, 16);
-        code.ANDI2R(a,a, 0xF);
-        code.MOVI2R(code.ABI_SCRATCH1, 0x00204081);
-        code.MUL(a, a, DecodeReg(code.ABI_SCRATCH1));
-        code.ANDI2R(a, a, 0x01010101,code.ABI_SCRATCH1);
-        code.MOVI2R(code.ABI_SCRATCH1, 0xFF);
-        code.MUL(a, a, DecodeReg(code.ABI_SCRATCH1));
+        code.ANDI2R(a, a, 0xF);
+        code.MOVI2R(scratch, 0x00204081);
+        code.MUL(a, a, scratch);
+        code.ANDI2R(a, a, 0x01010101, scratch);
+        code.MOVI2R(scratch, 0xFF);
+        code.MUL(a, a, scratch);
         code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_ge));
     }
 }
@@ -641,16 +644,17 @@ void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
     // We rely on the fact we disallow EFlag from changing within a block.
     
     if (arg.IsImmediate()) {
+        ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
         u32 new_pc = arg.GetImmediateU32();
         u32 mask = Common::Bit<0>(new_pc) ? 0xFFFFFFFE : 0xFFFFFFFC;
         u32 et = 0;
         et |= ctx.Location().EFlag() ? 2 : 0;
         et |= Common::Bit<0>(new_pc) ? 1 : 0;
 
-        code.MOVI2R(code.ABI_SCRATCH1, new_pc & mask);
-        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, MJitStateReg(A32::Reg::PC));
-        code.MOVI2R(code.ABI_SCRATCH1, et);
-        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_et));
+        code.MOVI2R(scratch, new_pc & mask);
+        code.STR(INDEX_UNSIGNED, scratch, X28, MJitStateReg(A32::Reg::PC));
+        code.MOVI2R(scratch, et);
+        code.STR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, CPSR_et));
     } else {
         if (ctx.Location().EFlag()) {
             ARM64Reg new_pc = DecodeReg(ctx.reg_alloc.UseScratchGpr(arg));
@@ -680,11 +684,12 @@ void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
 
 void A32EmitA64::EmitA32CallSupervisor(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(nullptr);
+    ARM64Reg cycles_remaining = ctx.reg_alloc.ScratchGpr();
 
     code.SwitchMxcsrOnExit();
     code.LDR(INDEX_UNSIGNED, code.ABI_PARAM2, X28, offsetof(A32JitState, cycles_to_run));
-    code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, X28, offsetof(A32JitState, cycles_remaining));
-    code.SUB(code.ABI_PARAM2, code.ABI_PARAM2, code.ABI_SCRATCH1);
+    code.LDR(INDEX_UNSIGNED, cycles_remaining, X28, offsetof(A32JitState, cycles_remaining));
+    code.SUB(code.ABI_PARAM2, code.ABI_PARAM2, cycles_remaining);
 
     Devirtualize<&A32::UserCallbacks::AddTicks>(config.callbacks).EmitCall(code);
     ctx.reg_alloc.EndOfAllocScope();
@@ -715,10 +720,11 @@ static u32 GetFpscrImpl(A32JitState* jit_state) {
 
 void A32EmitA64::EmitA32GetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(inst);
+    ARM64Reg fpsr = ctx.reg_alloc.ScratchGpr();
     code.MOV(code.ABI_PARAM1, X28);
 
-    code.MRS(code.ABI_SCRATCH1, FIELD_FPSR);
-    code.STR(INDEX_UNSIGNED,code.ABI_SCRATCH1, X28, offsetof(A32JitState, guest_FPSR));
+    code.MRS(fpsr, FIELD_FPSR);
+    code.STR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_FPSR));
     code.QuickCallFunction(&GetFpscrImpl);
 }
 
@@ -729,12 +735,14 @@ static void SetFpscrImpl(u32 value, A32JitState* jit_state) {
 void A32EmitA64::EmitA32SetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     ctx.reg_alloc.HostCall(nullptr, args[0]);
+    ARM64Reg fpsr = ctx.reg_alloc.ScratchGpr();
+
     code.MOV(code.ABI_PARAM2, X28);
 
     code.QuickCallFunction(&SetFpscrImpl);
 
-    code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, X28, offsetof(A32JitState, guest_FPSR));
-    code._MSR(FIELD_FPSR, code.ABI_SCRATCH1);
+    code.LDR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_FPSR));
+    code._MSR(FIELD_FPSR, fpsr);
 }
 
 void A32EmitA64::EmitA32GetFpscrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
@@ -760,9 +768,10 @@ void A32EmitA64::EmitA32SetExclusive(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     ASSERT(args[1].IsImmediate());
     Arm64Gen::ARM64Reg address = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
+    Arm64Gen::ARM64Reg state = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-    code.MOVI2R(code.ABI_SCRATCH1, u8(1));
-    code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, exclusive_state));
+    code.MOVI2R(state, u8(1));
+    code.STR(INDEX_UNSIGNED, state, X28, offsetof(A32JitState, exclusive_state));
     code.STR(INDEX_UNSIGNED, address, X28, offsetof(A32JitState, exclusive_address));
 }
 
@@ -831,6 +840,7 @@ static void WriteMemory(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* inst, 
     reg_alloc.UseScratch(args[0], ABI_PARAM2);
     reg_alloc.UseScratch(args[1], ABI_PARAM3);
 
+    Arm64Gen::ARM64Reg addr = reg_alloc.ScratchGpr();
     Arm64Gen::ARM64Reg vaddr = DecodeReg(code.ABI_PARAM2);
     Arm64Gen::ARM64Reg value = code.ABI_PARAM3;
     Arm64Gen::ARM64Reg page_index = reg_alloc.ScratchGpr();
@@ -838,23 +848,23 @@ static void WriteMemory(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* inst, 
 
     FixupBranch abort, end;
 
-    code.MOVI2R(code.ABI_SCRATCH1, reinterpret_cast<u64>(config.page_table));
+    code.MOVI2R(addr, reinterpret_cast<u64>(config.page_table));
     code.MOV(DecodeReg(page_index), vaddr, ArithOption{vaddr, ST_LSR, 12});
-    code.LDR(code.ABI_SCRATCH1, code.ABI_SCRATCH1, ArithOption{ page_index, true });
-    abort = code.CBZ(code.ABI_SCRATCH1);
+    code.LDR(addr, addr, ArithOption{ page_index, true });
+    abort = code.CBZ(addr);
     code.ANDI2R(DecodeReg(page_offset), DecodeReg(vaddr), 4095);
     switch (bit_size) {
     case 8:
-        code.STRB(DecodeReg(value), code.ABI_SCRATCH1, ArithOption{ page_offset });
+        code.STRB(DecodeReg(value), addr, ArithOption{ page_offset });
         break;
     case 16:
-        code.STRH(DecodeReg(value), code.ABI_SCRATCH1, ArithOption{ page_offset });
+        code.STRH(DecodeReg(value), addr, ArithOption{ page_offset });
         break;
     case 32:
-        code.STR(DecodeReg(value), code.ABI_SCRATCH1, ArithOption{ page_offset });
+        code.STR(DecodeReg(value), addr, ArithOption{ page_offset });
         break;
     case 64:
-        code.STR(value, code.ABI_SCRATCH1, ArithOption{ page_offset });
+        code.STR(value, addr, ArithOption{ page_offset });
         break;
     default:
         ASSERT_MSG(false, "Invalid bit_size");
@@ -912,11 +922,11 @@ static void ExclusiveWrite(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* ins
     std::vector<FixupBranch> end;
 
     code.MOVI2R(passed, u32(1));
-    code.LDR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, exclusive_state));
-    end.push_back(code.CBZ(DecodeReg(code.ABI_SCRATCH1)));
-    code.LDR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, exclusive_address));
-    code.EOR(tmp, code.ABI_PARAM2, DecodeReg(code.ABI_SCRATCH1));
-    code.TSTI2R(tmp, A32JitState::RESERVATION_GRANULE_MASK, code.ABI_SCRATCH1);
+    code.LDR(INDEX_UNSIGNED, tmp, X28, offsetof(A32JitState, exclusive_state));
+    end.push_back(code.CBZ(tmp));
+    code.LDR(INDEX_UNSIGNED, tmp, X28, offsetof(A32JitState, exclusive_address));
+    code.EOR(tmp, code.ABI_PARAM2, tmp);
+    code.TSTI2R(tmp, A32JitState::RESERVATION_GRANULE_MASK, reg_alloc.ScratchGpr());
     end.push_back(code.B(CC_NEQ));
     code.STR(INDEX_UNSIGNED, WZR, X28, offsetof(A32JitState, exclusive_state));
     if (prepend_high_word) {
