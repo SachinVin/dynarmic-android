@@ -43,28 +43,6 @@ ArgCallback DevirtualizeWindows(Common::mp::class_type_t<decltype(mfp)>* this_) 
 }
 
 template<auto mfp>
-ArgCallback DevirtualizeItanium(Common::mp::class_type_t<decltype(mfp)>* this_) {
-    struct MemberFunctionPointer {
-        /// For a non-virtual function, this is a simple function pointer.
-        /// For a virtual function, it is (1 + virtual table offset in bytes).
-        u64 ptr;
-        /// The required adjustment to `this`, prior to the call.
-        u64 adj;
-    } mfp_struct = Common::BitCast<MemberFunctionPointer>(mfp);
-
-    static_assert(sizeof(MemberFunctionPointer) == 16);
-    static_assert(sizeof(MemberFunctionPointer) == sizeof(mfp));
-
-    u64 fn_ptr = mfp_struct.ptr;
-    u64 this_ptr = reinterpret_cast<u64>(this_) + mfp_struct.adj;
-    if (mfp_struct.ptr & 1) {
-        u64 vtable = Common::BitCastPointee<u64>(this_ptr);
-        fn_ptr = Common::BitCastPointee<u64>(vtable + fn_ptr - 1);
-    }
-    return ArgCallback{fn_ptr, this_ptr};
-}
-
-template<auto mfp>
 ArgCallback DevirtualizeAarch64(Common::mp::class_type_t<decltype(mfp)>* this_) {
     struct MemberFunctionPointer {
         /// For a non-virtual function, this is a simple function pointer.
