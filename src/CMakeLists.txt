@@ -358,14 +358,13 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/emit_a64_data_processing.cpp
          backend/A64/emit_a64_floating_point.cpp
          backend/A64/emit_a64_packed.cpp
-         # backend/A64/emit_a64_saturation.cpp
+         backend/A64/emit_a64_saturation.cpp
          # backend/A64/emit_a64_sm4.cpp
          # backend/A64/emit_a64_vector.cpp
          # backend/A64/emit_a64_vector_floating_point.cpp
          backend/A64/hostloc.cpp
          backend/A64/hostloc.h
          backend/A64/jitstate_info.h
-         # backend/A64/oparg.h
          backend/A64/opcodes.inc
          backend/A64/perf_map.cpp
          backend/A64/perf_map.h

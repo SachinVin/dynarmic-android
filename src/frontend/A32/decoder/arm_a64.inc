@@ -200,10 +200,10 @@ INST(arm_REV16,         "REV16",               "cccc011010111111dddd11111011mmmm
 INST(arm_REVSH,         "REVSH",               "cccc011011111111dddd11111011mmmm") // v6
 
 // Saturation instructions
-//INST(arm_SSAT,          "SSAT",                "cccc0110101vvvvvddddvvvvvr01nnnn") // v6
-//INST(arm_SSAT16,        "SSAT16",              "cccc01101010vvvvdddd11110011nnnn") // v6
-//INST(arm_USAT,          "USAT",                "cccc0110111vvvvvddddvvvvvr01nnnn") // v6
-//INST(arm_USAT16,        "USAT16",              "cccc01101110vvvvdddd11110011nnnn") // v6
+INST(arm_SSAT,          "SSAT",                "cccc0110101vvvvvddddvvvvvr01nnnn") // v6
+INST(arm_SSAT16,        "SSAT16",              "cccc01101010vvvvdddd11110011nnnn") // v6
+INST(arm_USAT,          "USAT",                "cccc0110111vvvvvddddvvvvvr01nnnn") // v6
+INST(arm_USAT16,        "USAT16",              "cccc01101110vvvvdddd11110011nnnn") // v6
 
 // Divide instructions
 INST(arm_SDIV,          "SDIV",                "cccc01110001dddd1111mmmm0001nnnn") // v7a
@@ -260,14 +260,14 @@ INST(arm_USUB16,        "USUB16",              "cccc01100101nnnndddd11110111mmmm
 // Parallel Add/Subtract (Saturating) instructions
 INST(arm_QADD8,         "QADD8",               "cccc01100010nnnndddd11111001mmmm") // v6
 INST(arm_QADD16,        "QADD16",              "cccc01100010nnnndddd11110001mmmm") // v6
-//INST(arm_QASX,          "QASX",                "cccc01100010nnnndddd11110011mmmm") // v6
-//INST(arm_QSAX,          "QSAX",                "cccc01100010nnnndddd11110101mmmm") // v6
+INST(arm_QASX,          "QASX",                "cccc01100010nnnndddd11110011mmmm") // v6
+INST(arm_QSAX,          "QSAX",                "cccc01100010nnnndddd11110101mmmm") // v6
 INST(arm_QSUB8,         "QSUB8",               "cccc01100010nnnndddd11111111mmmm") // v6
 INST(arm_QSUB16,        "QSUB16",              "cccc01100010nnnndddd11110111mmmm") // v6
 INST(arm_UQADD8,        "UQADD8",              "cccc01100110nnnndddd11111001mmmm") // v6
 INST(arm_UQADD16,       "UQADD16",             "cccc01100110nnnndddd11110001mmmm") // v6
-//INST(arm_UQASX,         "UQASX",               "cccc01100110nnnndddd11110011mmmm") // v6
-//INST(arm_UQSAX,         "UQSAX",               "cccc01100110nnnndddd11110101mmmm") // v6
+INST(arm_UQASX,         "UQASX",               "cccc01100110nnnndddd11110011mmmm") // v6
+INST(arm_UQSAX,         "UQSAX",               "cccc01100110nnnndddd11110101mmmm") // v6
 INST(arm_UQSUB8,        "UQSUB8",              "cccc01100110nnnndddd11111111mmmm") // v6
 INST(arm_UQSUB16,       "UQSUB16",             "cccc01100110nnnndddd11110111mmmm") // v6
 
