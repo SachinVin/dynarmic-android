@@ -425,3 +425,40 @@ TEST_CASE("arm: Test stepping 3", "[arm]") {
     REQUIRE(jit.Regs()[15] == 20);
     REQUIRE(jit.Cpsr() == 0x000001d0);
 }
+
+TEST_CASE("arm: Cleared Q flag", "[arm][A32]") {
+    ArmTestEnv test_env;
+    A32::Jit jit{GetUserConfig(&test_env)};
+
+    //    qadd r1, r0, r0
+    //    msr APSR_nzcvq, #0
+    //    qadd r3, r2, r2
+    //    b +#0 (infinite loop)
+    test_env.code_mem = {
+        0xe1001050,
+        0xe328f000,
+        0xe1023052,
+        0xeafffffe, 
+    };
+
+    jit.Regs() = {
+                0x7FFFFFFF, // R0
+                0x80008000, // R1
+                0x00008000, // R2
+                0x7f7f7f7f, // R3
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+    };
+
+    jit.SetCpsr(0x000001d0); // User-mode
+
+    test_env.ticks_left = 4;
+    jit.Run();
+
+    REQUIRE(jit.Regs()[0] == 0x7FFFFFFF);
+    REQUIRE(jit.Regs()[1] == 0x7FFFFFFF);
+    REQUIRE(jit.Regs()[2] == 0x00008000);
+    REQUIRE(jit.Regs()[3] == 0x00010000);
+    REQUIRE(jit.Cpsr() == 0x000001d0);
+}
