@@ -1056,11 +1056,11 @@ void EmitA64::EmitNot64(EmitContext& ctx, IR::Inst* inst) {
 
     Arm64Gen::ARM64Reg result;
     if (args[0].IsImmediate()) {
-        result = DecodeReg(ctx.reg_alloc.ScratchGpr());
+        result = ctx.reg_alloc.ScratchGpr();
         code.MOVI2R(result, u32(~args[0].GetImmediateU32()));
     }
     else {
-        result = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
+        result = ctx.reg_alloc.UseScratchGpr(args[0]);
         code.MVN(result, result);
     }
     ctx.reg_alloc.DefineValue(inst, result);
@@ -1116,12 +1116,12 @@ void EmitA64::EmitZeroExtendHalfToWord(EmitContext& ctx, IR::Inst* inst) {
 }
 
 void EmitA64::EmitZeroExtendByteToLong(EmitContext& ctx, IR::Inst* inst) {
-    // x64 zeros upper 32 bits on a 32-bit move
+    // a64 zeros upper 32 bits on a 32-bit move
     EmitZeroExtendByteToWord(ctx, inst);
 }
 
 void EmitA64::EmitZeroExtendHalfToLong(EmitContext& ctx, IR::Inst* inst) {
-    // x64 zeros upper 32 bits on a 32-bit move
+    // a64 zeros upper 32 bits on a 32-bit move
     EmitZeroExtendHalfToWord(ctx, inst);
 }
 
