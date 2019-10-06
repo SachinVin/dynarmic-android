@@ -407,10 +407,18 @@ void A32EmitA64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     
     // TODO:Inline
     ctx.reg_alloc.HostCall(nullptr, args[0]);
+
+    ARM64Reg host_fpsr = ctx.reg_alloc.ScratchGpr();
     
     if (config.always_little_endian) {
         code.ANDI2R(code.ABI_PARAM1, code.ABI_PARAM1, 0xFFFFFDFF, ctx.reg_alloc.ScratchGpr());
     }
+
+    // Since this is one of the only places where the ~sticky~ 
+    // guest's Q flag can be cleared it is also a great place to clear the host's Q flag
+    code.MRS(host_fpsr, FIELD_FPSR);
+    code.ANDI2R(host_fpsr, host_fpsr, ~(1 << 27));
+    code._MSR(FIELD_FPSR, host_fpsr);
 
     code.MOV(code.ABI_PARAM2, X28);
     code.QuickCallFunction(&SetCpsrImpl);
@@ -426,6 +434,7 @@ void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
 
 void A32EmitA64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    ARM64Reg host_fpsr = ctx.reg_alloc.ScratchGpr();
     if (args[0].IsImmediate()) {
         u32 imm = args[0].GetImmediateU32();
         ARM64Reg a = DecodeReg(ctx.reg_alloc.ScratchGpr());
@@ -443,6 +452,13 @@ void A32EmitA64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {
         code.ANDI2R(a, a, 0xF0000000);
         code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_nzcv));
     }
+
+    // Since this is one of the only places where the ~sticky~ 
+    // guest's Q flag can be cleared it is also a great place to clear the host's Q flag.
+    // TODO : possibly a better job at explaining.
+    code.MRS(host_fpsr, FIELD_FPSR);
+    code.ANDI2R(host_fpsr, host_fpsr, ~(1 << 27));
+    code._MSR(FIELD_FPSR, host_fpsr);
 }
 
 void A32EmitA64::EmitA32GetNFlag(A32EmitContext& ctx, IR::Inst* inst) {

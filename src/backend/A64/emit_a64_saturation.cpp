@@ -20,6 +20,75 @@ namespace Dynarmic::BackendA64 {
 
 namespace mp = Dynarmic::Common::mp;
 
+namespace {
+
+enum class Op {
+    Add,
+    Sub,
+};
+
+template<Op op, size_t size>
+void EmitSignedSaturatedOp(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst) {
+    const auto overflow_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetOverflowFromOp);
+
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    ARM64Reg result = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
+    ARM64Reg addend = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
+
+    if constexpr (op == Op::Add) {
+        code.fp_emitter.SQADD(size, result, result, addend);
+    }
+    else {
+        code.fp_emitter.SQSUB(size, result, result, addend);
+    }
+
+    if (overflow_inst) {
+        ARM64Reg overflow = ctx.reg_alloc.ScratchGpr();
+
+        code.MRS(overflow, FIELD_FPSR);
+        code.UBFX(overflow, overflow, 27, 1);
+
+        ctx.reg_alloc.DefineValue(overflow_inst, overflow);
+        ctx.EraseInstruction(overflow_inst);
+    }
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+} // anonymous namespace
+
+void EmitA64::EmitSignedSaturatedAdd8(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Add, 8>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedAdd16(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Add, 16>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedAdd32(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Add, 32>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedAdd64(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Add, 64>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedSub8(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Sub, 8>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedSub16(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Sub, 16>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedSub32(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Sub, 32>(code, ctx, inst);
+}
+
+void EmitA64::EmitSignedSaturatedSub64(EmitContext& ctx, IR::Inst* inst) {
+    EmitSignedSaturatedOp<Op::Sub, 64>(code, ctx, inst);
+}
+
 void EmitA64::EmitSignedSaturation(EmitContext& ctx, IR::Inst* inst) {
     const auto overflow_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetOverflowFromOp);
 
