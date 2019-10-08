@@ -1445,7 +1445,7 @@ void ARM64XEmitter::SUBS(ARM64Reg Rd, ARM64Reg Rn, u32 imm, bool shift) {
     EncodeAddSubImmInst(1, true, shift, imm, Rn, Rd);
 }
 void ARM64XEmitter::CMP(ARM64Reg Rn, u32 imm, bool shift) {
-    EncodeAddSubImmInst(1, true, shift, imm, Rn, Is64Bit(Rn) ? SP : WSP);
+    EncodeAddSubImmInst(1, true, shift, imm, Rn, Is64Bit(Rn) ? ZR : WZR);
 }
 
 // Data Processing (Immediate)
