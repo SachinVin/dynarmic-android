@@ -415,3 +415,5 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 # Disable this as it relies on a non-standard feature
 target_compile_definitions(dynarmic PRIVATE FMT_USE_USER_DEFINED_LITERALS=0)
+
+#export(TARGETS dynarmic boost fmt xbyak FILE "dynarmic-config.cmake")
