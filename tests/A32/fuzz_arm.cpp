@@ -34,6 +34,14 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+static Dynarmic::A32::UserConfig GetUserConfig(ArmTestEnv* testenv) {
+    Dynarmic::A32::UserConfig user_config;
+    user_config.enable_fast_dispatch = false;
+    user_config.callbacks = testenv;
+    user_config.fastmem_pointer = reinterpret_cast<void*>(0xFFFFFDDE00000000);
+    return user_config;
+}
+
 namespace {
 using namespace Dynarmic;
 

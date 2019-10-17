@@ -25,6 +25,10 @@ public:
         return !operator==(o);
     }
 
+    bool operator < (const LocationDescriptor& o) const {
+        return value < o.Value();
+    }
+
     u64 Value() const { return value; }
 
 private:
@@ -36,12 +40,6 @@ std::ostream& operator<<(std::ostream& o, const LocationDescriptor& descriptor);
 } // namespace Dynarmic::IR
 
 namespace std {
-template <>
-struct less<Dynarmic::IR::LocationDescriptor> {
-    bool operator()(const Dynarmic::IR::LocationDescriptor& x, const Dynarmic::IR::LocationDescriptor& y) const noexcept {
-        return x.Value() < y.Value();
-    }
-};
 template <>
 struct hash<Dynarmic::IR::LocationDescriptor> {
     size_t operator()(const Dynarmic::IR::LocationDescriptor& x) const noexcept {
