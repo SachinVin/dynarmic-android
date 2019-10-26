@@ -4,18 +4,22 @@
  * General Public License version 2 or any later version.
  */
 
-#include "backend/A64/block_of_code.h"
+#include "backend/A64/exception_handler.h"
 
 namespace Dynarmic::BackendA64 {
 
-struct BlockOfCode::ExceptionHandler::Impl final {
+struct ExceptionHandler::Impl final {
 };
 
-BlockOfCode::ExceptionHandler::ExceptionHandler() = default;
-BlockOfCode::ExceptionHandler::~ExceptionHandler() = default;
+ExceptionHandler::ExceptionHandler() = default;
+ExceptionHandler::~ExceptionHandler() = default;
 
-void BlockOfCode::ExceptionHandler::Register(BlockOfCode&) {
+void ExceptionHandler::Register(BlockOfCode&, std::function<void(CodePtr)>) {
     // Do nothing
+}
+
+bool ExceptionHandler::SupportsFastmem() const {
+    return false;
 }
 
 } // namespace Dynarmic::BackendA64
