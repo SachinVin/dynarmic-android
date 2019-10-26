@@ -857,10 +857,12 @@ void ARM64XEmitter::EncodeLoadStoreUnscaled(u32 size, u32 op, ARM64Reg Rt, ARM64
 }
 
 // FixupBranch branching
-void ARM64XEmitter::SetJumpTarget(FixupBranch const& branch) {
+void ARM64XEmitter::SetJumpTarget(FixupBranch const& branch, u8* target) {
+    if(!target)
+        target = m_code;
     bool Not = false;
     u32 inst = 0;
-    s64 distance = static_cast<s64>(m_code - branch.ptr);
+    s64 distance = static_cast<s64>(target - branch.ptr);
     distance >>= 2;
 
     switch (branch.type) {
@@ -891,7 +893,7 @@ void ARM64XEmitter::SetJumpTarget(FixupBranch const& branch) {
         inst = ((branch.bit & 0x20) << 26) | (0x1B << 25) | (Not << 24) |
                ((branch.bit & 0x1F) << 19) | (MaskImm14(distance) << 5) | reg;
     } break;
-    case 5: // B (uncoditional)
+    case 5: // B (unconditional)
         ASSERT_MSG(IsInRangeImm26(distance), "%s(%d): Received too large distance: %" PRIx64,
                    __func__, branch.type, distance);
         inst = (0x5 << 26) | MaskImm26(distance);

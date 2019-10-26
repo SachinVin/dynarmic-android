@@ -130,22 +130,32 @@ inline size_t HostLocBitWidth(HostLoc loc) {
 
 using HostLocList = std::initializer_list<HostLoc>;
 
-
 // X18 may be reserved.(Windows and iOS)
+// X27 contains an emulated memory relate pointer
 // X28 used for holding the JitState.
 // X30 is the link register.
-const HostLocList any_gpr = {
-    HostLoc::X0,  HostLoc::X1,  HostLoc::X2,  HostLoc::X3,  HostLoc::X4,  HostLoc::X5,  HostLoc::X6,  HostLoc::X7,
-    HostLoc::X8,  HostLoc::X9,  HostLoc::X10, HostLoc::X11, HostLoc::X12, HostLoc::X13, HostLoc::X14, HostLoc::X15, 
-    HostLoc::X16, HostLoc::X17, HostLoc::X19, HostLoc::X20, HostLoc::X21, HostLoc::X22, HostLoc::X23, HostLoc::X24,
-    HostLoc::X25, HostLoc::X26, HostLoc::X27, // HostLoc::X29,
+// In order of desireablity based first on ABI
+constexpr HostLocList any_gpr = {
+    HostLoc::X19, HostLoc::X20, HostLoc::X21, HostLoc::X22, HostLoc::X23,
+    HostLoc::X24, HostLoc::X25, HostLoc::X26,
+
+    HostLoc::X8,  HostLoc::X9,  HostLoc::X10, HostLoc::X11, HostLoc::X12,
+    HostLoc::X13, HostLoc::X14, HostLoc::X15, HostLoc::X16, HostLoc::X17,
+
+    HostLoc::X7,  HostLoc::X6,  HostLoc::X5,  HostLoc::X4,  HostLoc::X3,
+    HostLoc::X2,  HostLoc::X1,  HostLoc::X0,
 };
 
-const HostLocList any_fpr = {
-    HostLoc::Q0,  HostLoc::Q1,  HostLoc::Q2,  HostLoc::Q3,  HostLoc::Q4,  HostLoc::Q5,  HostLoc::Q6,  HostLoc::Q7,
-    HostLoc::Q8,  HostLoc::Q9,  HostLoc::Q10, HostLoc::Q11, HostLoc::Q12, HostLoc::Q13, HostLoc::Q14, HostLoc::Q15,
-    HostLoc::Q16, HostLoc::Q17, HostLoc::Q18, HostLoc::Q19, HostLoc::Q20, HostLoc::Q21, HostLoc::Q22, HostLoc::Q23,
-    HostLoc::Q24, HostLoc::Q25, HostLoc::Q26, HostLoc::Q27, HostLoc::Q28, HostLoc::Q29, HostLoc::Q30, HostLoc::Q31,
+constexpr HostLocList any_fpr = {
+    HostLoc::Q8,  HostLoc::Q9,  HostLoc::Q10, HostLoc::Q11, HostLoc::Q12, HostLoc::Q13,
+    HostLoc::Q14, HostLoc::Q15,
+
+    HostLoc::Q16, HostLoc::Q17, HostLoc::Q18, HostLoc::Q19, HostLoc::Q20, HostLoc::Q21,
+    HostLoc::Q22, HostLoc::Q23, HostLoc::Q24, HostLoc::Q25, HostLoc::Q26, HostLoc::Q27,
+    HostLoc::Q28, HostLoc::Q29, HostLoc::Q30, HostLoc::Q31,
+
+    HostLoc::Q7,  HostLoc::Q6,  HostLoc::Q5,  HostLoc::Q4,  HostLoc::Q3,  HostLoc::Q2,
+    HostLoc::Q1,  HostLoc::Q0,
 };
 
 Arm64Gen::ARM64Reg HostLocToReg64(HostLoc loc);
@@ -156,9 +166,10 @@ size_t SpillToOpArg(HostLoc loc) {
     ASSERT(HostLocIsSpill(loc));
 
     size_t i = static_cast<size_t>(loc) - static_cast<size_t>(HostLoc::FirstSpill);
-    ASSERT_MSG(i < JitStateType::SpillCount, "Spill index greater than number of available spill locations");
+    ASSERT_MSG(i < JitStateType::SpillCount,
+               "Spill index greater than number of available spill locations");
 
     return JitStateType::GetSpillLocationOffsetFromIndex(i);
 }
 
-} // namespace Dynarmic::BackendX64
+} // namespace Dynarmic::BackendA64

@@ -435,7 +435,7 @@ HostLoc RegAlloc::SelectARegister(HostLocList desired_locations) const {
      std::vector<HostLoc> candidates = desired_locations;
 
     // Find all locations that have not been allocated..
-    auto allocated_locs = std::partition(candidates.begin(), candidates.end(), [this](auto loc){
+    const auto allocated_locs = std::partition(candidates.begin(), candidates.end(), [this](auto loc){
         return !this->LocInfo(loc).IsLocked();
     });
     candidates.erase(allocated_locs, candidates.end());

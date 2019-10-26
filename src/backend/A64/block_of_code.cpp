@@ -71,7 +71,6 @@ BlockOfCode::BlockOfCode(RunCodeCallbacks cb, JitStateInfo jsi)
     AllocCodeSpace(TOTAL_CODE_SIZE);
     EnableWriting();
     GenRunCode();
-    exception_handler.Register(*this);
 }
 
 void BlockOfCode::PreludeComplete() {
@@ -155,7 +154,8 @@ void BlockOfCode::GenRunCode() {
     ABI_PushCalleeSaveRegistersAndAdjustStack(*this);
 
     MOV(Arm64Gen::X28, ABI_PARAM1);
-    MOV(Arm64Gen::X27, ABI_PARAM2); //  temporarily in non-volatile register
+    MOVI2R(Arm64Gen::X27, cb.value_in_X27);
+    MOV(Arm64Gen::X26, ABI_PARAM2); // save temporarily in non-volatile register
 
     cb.GetTicksRemaining->EmitCall(*this);
 
@@ -163,7 +163,7 @@ void BlockOfCode::GenRunCode() {
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
 
     SwitchFpscrOnEntry();
-    BR(Arm64Gen::X27);
+    BR(Arm64Gen::X26);
 
     AlignCode16();
     run_code = (RunCodeFuncType) GetWritableCodePtr();
@@ -175,6 +175,7 @@ void BlockOfCode::GenRunCode() {
     ABI_PushCalleeSaveRegistersAndAdjustStack(*this);
 
     MOV(Arm64Gen::X28, ABI_PARAM1);
+    MOVI2R(Arm64Gen::X27, cb.value_in_X27);
 
     cb.GetTicksRemaining->EmitCall(*this);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
@@ -291,6 +292,14 @@ CodePtr BlockOfCode::GetCodeBegin() const {
     return near_code_begin;
 }
 
+u8* BlockOfCode::GetRegion() const {
+    return region;
+}
+
+std::size_t BlockOfCode::GetRegionSize() const {
+    return total_region_size;
+};
+
 void* BlockOfCode::AllocateFromCodeSpace(size_t alloc_size) {    
     ASSERT_MSG(GetSpaceLeft() >= alloc_size, "ERR_CODE_IS_TOO_BIG");
 
@@ -323,4 +332,4 @@ void BlockOfCode::EnsurePatchLocationSize(CodePtr begin, size_t size) {
 //#endif
 //}
 
-} // namespace Dynarmic::BackendX64
+} // namespace Dynarmic::BackendA64
