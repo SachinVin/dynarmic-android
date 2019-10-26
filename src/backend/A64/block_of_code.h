@@ -24,11 +24,14 @@ struct RunCodeCallbacks {
     std::unique_ptr<Callback> LookupBlock;
     std::unique_ptr<Callback> AddTicks;
     std::unique_ptr<Callback> GetTicksRemaining;
+    u64 value_in_X27;
 };
 
 class BlockOfCode final : public Arm64Gen::ARM64CodeBlock {
 public:
     BlockOfCode(RunCodeCallbacks cb, JitStateInfo jsi);
+    BlockOfCode(const BlockOfCode&) = delete;
+
 
     /// Call when external emitters have finished emitting their preludes.
     void PreludeComplete();
@@ -74,6 +77,8 @@ public:
     void SwitchToNearCode();
 
     CodePtr GetCodeBegin() const;
+    u8* GetRegion() const;
+    std::size_t GetRegionSize() const;
 
     const void* GetReturnFromRunCodeAddress() const {
         return return_from_run_code[0];
@@ -136,20 +141,6 @@ private:
     static constexpr size_t FORCE_RETURN = 1 << 1;
     std::array<const void*, 4> return_from_run_code;
     void GenRunCode();
-
-
-
-    class ExceptionHandler final {
-    public:
-        ExceptionHandler();
-        ~ExceptionHandler();
-
-        void Register(BlockOfCode& code);
-    private:
-        struct Impl;
-        std::unique_ptr<Impl> impl;
-    };
-    ExceptionHandler exception_handler;
 
     //Xbyak::util::Cpu cpu_info;
 };
