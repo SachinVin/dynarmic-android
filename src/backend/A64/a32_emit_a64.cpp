@@ -4,6 +4,7 @@
  * General Public License version 2 or any later version.
  */
 
+#include <iterator>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -76,12 +77,18 @@ bool A32EmitContext::FPSCR_DN() const {
     return Location().FPSCR().DN();
 }
 
+std::ptrdiff_t A32EmitContext::GetInstOffset(IR::Inst* inst) const {
+    return std::distance(block.begin(), IR::Block::iterator(inst));
+}
+
 A32EmitA64::A32EmitA64(BlockOfCode& code, A32::UserConfig config, A32::Jit* jit_interface)
     : EmitA64(code), config(std::move(config)), jit_interface(jit_interface) {
+    exception_handler.Register(code, [this](CodePtr PC){FastmemCallback(PC);});
     GenMemoryAccessors();
     GenTerminalHandlers();
     code.PreludeComplete();
     ClearFastDispatchTable();
+    fastmem_patch_info.clear();
 }
 
 A32EmitA64::~A32EmitA64() = default;
@@ -152,6 +159,7 @@ void A32EmitA64::ClearCache() {
     EmitA64::ClearCache();
     block_ranges.ClearCache();
     ClearFastDispatchTable();
+    fastmem_patch_info.clear();
 }
 
 void A32EmitA64::InvalidateCacheRanges(const boost::icl::interval_set<u32>& ranges) {
@@ -781,137 +789,272 @@ void A32EmitA64::EmitA32SetExclusive(A32EmitContext& ctx, IR::Inst* inst) {
     code.STR(INDEX_UNSIGNED, address, X28, offsetof(A32JitState, exclusive_address));
 }
 
-template <typename T, T (A32::UserCallbacks::*raw_fn)(A32::VAddr)>
-static void ReadMemory(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* inst, const A32::UserConfig& config, const CodePtr wrapped_fn) {
-    constexpr size_t bit_size = Common::BitSize<T>();
-    auto args = reg_alloc.GetArgumentInfo(inst);
-
-    if (!config.page_table) {
-        reg_alloc.HostCall(inst, {}, args[0]);
-        Devirtualize<raw_fn>(config.callbacks).EmitCall(code);
-        return;
-    }
-
-    reg_alloc.UseScratch(args[0], ABI_PARAM2);
-
-    Arm64Gen::ARM64Reg result = reg_alloc.ScratchGpr({ABI_RETURN});
-    Arm64Gen::ARM64Reg vaddr = DecodeReg(code.ABI_PARAM2);
-    Arm64Gen::ARM64Reg page_index = reg_alloc.ScratchGpr();
-    Arm64Gen::ARM64Reg page_offset = reg_alloc.ScratchGpr();
-
-    FixupBranch abort, end;
-
-    code.MOVP2R(result, config.page_table);
-    code.MOV(DecodeReg(page_index), vaddr, ArithOption{vaddr, ST_LSR, 12});
-    code.LDR(result, result, ArithOption{page_index, true});
-    abort = code.CBZ(result);
-    code.ANDI2R(DecodeReg(page_offset), DecodeReg(vaddr), 4095);
-    switch (bit_size) {
-    case 8:
-        code.LDRB(DecodeReg(result), result, ArithOption{ page_offset });
-        break;
-    case 16:
-        code.LDRH(DecodeReg(result), result, ArithOption{ page_offset });
-        break;
-    case 32:
-        code.LDR(DecodeReg(result), result, ArithOption{ page_offset });
-        break;
-    case 64:
-        code.LDR(result, result, ArithOption{ page_offset });
-        break;
-    default:
-        ASSERT_MSG(false, "Invalid bit_size");
-        break;
-    }
-    end = code.B();
-    code.SetJumpTarget(abort);
-    code.BL(wrapped_fn);
-    code.SetJumpTarget(end);
-
-    reg_alloc.DefineValue(inst, result);
+A32EmitA64::DoNotFastmemMarker A32EmitA64::GenerateDoNotFastmemMarker(A32EmitContext& ctx, IR::Inst* inst) {
+    return std::make_tuple(ctx.Location(), ctx.GetInstOffset(inst));
 }
 
-template <typename T, void (A32::UserCallbacks::*raw_fn)(A32::VAddr, T)>
-static void WriteMemory(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* inst, const A32::UserConfig& config, const CodePtr wrapped_fn) {
-    constexpr size_t bit_size = Common::BitSize<T>();
-    auto args = reg_alloc.GetArgumentInfo(inst);
+bool A32EmitA64::ShouldFastmem(const DoNotFastmemMarker& marker) const {
+    return config.fastmem_pointer && exception_handler.SupportsFastmem() && do_not_fastmem.count(marker) == 0;
+}
 
-    if (!config.page_table) {
-        reg_alloc.HostCall(nullptr, {}, args[0], args[1]);
-        Devirtualize<raw_fn>(config.callbacks).EmitCall(code);
+void A32EmitA64::DoNotFastmem(const DoNotFastmemMarker& marker) {
+    do_not_fastmem.emplace(marker);
+    InvalidateBasicBlocks({std::get<0>(marker)});
+}
+
+template <typename T>
+void A32EmitA64::ReadMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr callback_fn) {
+    constexpr size_t bit_size = Common::BitSize<T>();
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    ctx.reg_alloc.UseScratch(args[0], ABI_PARAM2);
+    ctx.reg_alloc.ScratchGpr({ABI_RETURN});
+
+    ARM64Reg result = ctx.reg_alloc.ScratchGpr();
+    ARM64Reg vaddr = DecodeReg(code.ABI_PARAM2);
+    ARM64Reg tmp = code.ABI_RETURN;
+
+    const auto do_not_fastmem_marker = GenerateDoNotFastmemMarker(ctx, inst);
+
+    const auto page_table_lookup = [this, result, vaddr, tmp, callback_fn](FixupBranch& end) {
+        constexpr size_t bit_size = Common::BitSize<T>();
+
+        code.MOVP2R(result, config.page_table);
+        code.MOV(tmp, vaddr, ArithOption{vaddr, ST_LSR, 12});
+        code.LDR(result, result, ArithOption{tmp, true});
+        FixupBranch abort = code.CBZ(result);
+        code.ANDI2R(vaddr, vaddr, 4095);
+        switch (bit_size) {
+            case 8:
+                code.LDRB(DecodeReg(result), result, vaddr);
+                break;
+            case 16:
+                code.LDRH(DecodeReg(result), result, vaddr);
+                break;
+            case 32:
+                code.LDR(DecodeReg(result), result, vaddr);
+                break;
+            case 64:
+                code.LDR(result, result, vaddr);
+                break;
+            default:
+                ASSERT_MSG(false, "Invalid bit_size");
+                break;
+        }
+        end = code.B();
+        code.SetJumpTarget(abort);
+        code.BL(callback_fn);
+        code.MOV(result, code.ABI_RETURN);
+    };
+
+
+    if (ShouldFastmem(do_not_fastmem_marker)) {
+        const CodePtr patch_location = code.GetCodePtr();
+        switch (bit_size) {
+            case 8:
+                code.LDRB(DecodeReg(result), X27, vaddr);
+                break;
+            case 16:
+                code.LDRH(DecodeReg(result), X27, vaddr);
+                break;
+            case 32:
+                code.LDR(DecodeReg(result), X27, vaddr);
+                break;
+            case 64:
+                code.LDR(result, X27, vaddr);
+                break;
+            default:
+                ASSERT_MSG(false, "Invalid bit_size");
+                break;
+        }
+        code.EnsurePatchLocationSize(patch_location, 5);
+
+        fastmem_patch_info.emplace(
+                patch_location,
+                FastmemPatchInfo{
+                        [this, patch_location, page_table_lookup, callback_fn, result, do_not_fastmem_marker]{
+                            CodePtr save_code_ptr = code.GetCodePtr();
+                            code.SetCodePtr(patch_location);
+                            FixupBranch thunk = code.B();
+                            u8* end_ptr = code.GetWritableCodePtr();
+                            code.EnsurePatchLocationSize(patch_location, 5);
+                            code.FlushIcacheSection(reinterpret_cast<const u8*>(patch_location), code.GetCodePtr());
+
+                            code.SetCodePtr(save_code_ptr);
+                            code.SwitchToFarCode();
+                            code.SetJumpTarget(thunk);
+                            if (config.page_table) {
+                                FixupBranch end{};
+                                page_table_lookup(end);
+                                code.SetJumpTarget(end, end_ptr);
+                            } else {
+                                code.BL(callback_fn);
+                                code.MOV(result, code.ABI_RETURN);
+                            }
+                            code.B(end_ptr);
+                            code.FlushIcache();
+                            code.SwitchToNearCode();
+
+                            DoNotFastmem(do_not_fastmem_marker);
+                        }
+                });
+
+        ctx.reg_alloc.DefineValue(inst, result);
         return;
     }
 
-    reg_alloc.ScratchGpr({ABI_RETURN});
-    reg_alloc.UseScratch(args[0], ABI_PARAM2);
-    reg_alloc.UseScratch(args[1], ABI_PARAM3);
-
-    Arm64Gen::ARM64Reg addr = reg_alloc.ScratchGpr();
-    Arm64Gen::ARM64Reg vaddr = DecodeReg(code.ABI_PARAM2);
-    Arm64Gen::ARM64Reg value = code.ABI_PARAM3;
-    Arm64Gen::ARM64Reg page_index = reg_alloc.ScratchGpr();
-    Arm64Gen::ARM64Reg page_offset = reg_alloc.ScratchGpr();
-
-    FixupBranch abort, end;
-
-    code.MOVI2R(addr, reinterpret_cast<u64>(config.page_table));
-    code.MOV(DecodeReg(page_index), vaddr, ArithOption{vaddr, ST_LSR, 12});
-    code.LDR(addr, addr, ArithOption{ page_index, true });
-    abort = code.CBZ(addr);
-    code.ANDI2R(DecodeReg(page_offset), DecodeReg(vaddr), 4095);
-    switch (bit_size) {
-    case 8:
-        code.STRB(DecodeReg(value), addr, ArithOption{ page_offset });
-        break;
-    case 16:
-        code.STRH(DecodeReg(value), addr, ArithOption{ page_offset });
-        break;
-    case 32:
-        code.STR(DecodeReg(value), addr, ArithOption{ page_offset });
-        break;
-    case 64:
-        code.STR(value, addr, ArithOption{ page_offset });
-        break;
-    default:
-        ASSERT_MSG(false, "Invalid bit_size");
-        break;
+    if (!config.page_table) {
+        code.BL(callback_fn);
+        code.MOV(result, code.ABI_RETURN);
+        ctx.reg_alloc.DefineValue(inst, result);
+        return;
     }
-    end = code.B();
-    code.SetJumpTarget(abort);
-    code.BL(wrapped_fn);
+
+    FixupBranch end{};
+    page_table_lookup(end);
+    code.SetJumpTarget(end);
+
+    ctx.reg_alloc.DefineValue(inst, result);
+}
+
+template<typename T>
+void A32EmitA64::WriteMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr callback_fn) {
+    constexpr size_t bit_size = Common::BitSize<T>();
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+
+    ctx.reg_alloc.ScratchGpr({ABI_RETURN});
+    ctx.reg_alloc.UseScratch(args[0], ABI_PARAM2);
+    ctx.reg_alloc.UseScratch(args[1], ABI_PARAM3);
+
+    ARM64Reg vaddr = DecodeReg(code.ABI_PARAM2);
+    ARM64Reg value = code.ABI_PARAM3;
+    ARM64Reg page_index = ctx.reg_alloc.ScratchGpr();
+    ARM64Reg addr = ctx.reg_alloc.ScratchGpr();
+
+    const auto do_not_fastmem_marker = GenerateDoNotFastmemMarker(ctx, inst);
+
+    const auto page_table_lookup = [this, vaddr, value, page_index, addr, callback_fn](FixupBranch& end) {
+        constexpr size_t bit_size = Common::BitSize<T>();
+
+        code.MOVP2R(addr, config.page_table);
+        code.MOV(DecodeReg(page_index), vaddr, ArithOption{vaddr, ST_LSR, 12});
+        code.LDR(addr, addr, ArithOption{page_index, true});
+        FixupBranch abort = code.CBZ(addr);
+        code.ANDI2R(vaddr, vaddr, 4095);
+        switch (bit_size) {
+            case 8:
+                code.STRB(DecodeReg(value), addr, vaddr);
+                break;
+            case 16:
+                code.STRH(DecodeReg(value), addr, vaddr);
+                break;
+            case 32:
+                code.STR(DecodeReg(value), addr, vaddr);;
+                break;
+            case 64:
+                code.STR(value, addr, vaddr);
+                break;
+            default:
+                ASSERT_MSG(false, "Invalid bit_size");
+                break;
+        }
+        end = code.B();
+        code.SetJumpTarget(abort);
+        code.BL(callback_fn);
+    };
+
+    if (ShouldFastmem(do_not_fastmem_marker)) {
+        const CodePtr patch_location = code.GetCodePtr();
+        switch (bit_size) {
+            case 8:
+                code.STRB(DecodeReg(value), X27, vaddr);
+                break;
+            case 16:
+                code.STRH(DecodeReg(value), X27, vaddr);
+                break;
+            case 32:
+                code.STR(DecodeReg(value), X27, vaddr);
+                break;
+            case 64:
+                code.STR(value, X27, vaddr);
+                break;
+            default:
+                ASSERT_MSG(false, "Invalid bit_size");
+                break;
+        }
+        code.EnsurePatchLocationSize(patch_location, 5);
+
+        fastmem_patch_info.emplace(
+                patch_location,
+                FastmemPatchInfo{
+                        [this, patch_location, page_table_lookup, callback_fn, do_not_fastmem_marker]{
+                            CodePtr save_code_ptr = code.GetCodePtr();
+                            code.SetCodePtr(patch_location);
+                            FixupBranch thunk = code.B();
+                            u8* end_ptr = code.GetWritableCodePtr();
+                            code.EnsurePatchLocationSize(patch_location, 5);
+                            code.FlushIcacheSection(reinterpret_cast<const u8*>(patch_location), code.GetCodePtr());
+
+                            code.SetCodePtr(save_code_ptr);
+                            code.SwitchToFarCode();
+                            code.SetJumpTarget(thunk);
+                            if (config.page_table) {
+                                FixupBranch end{};
+                                page_table_lookup(end);
+                                code.SetJumpTarget(end, end_ptr);
+                            } else {
+                                code.BL(callback_fn);
+                            }
+                            code.B(end_ptr);
+                            code.FlushIcache();
+                            code.SwitchToNearCode();
+
+                            DoNotFastmem(do_not_fastmem_marker);
+                        }
+                });
+        return;
+    }
+
+    if (!config.page_table) {
+        code.BL(callback_fn);
+        return;
+    }
+
+    FixupBranch end{};
+    page_table_lookup(end);
     code.SetJumpTarget(end);
 }
 
 void A32EmitA64::EmitA32ReadMemory8(A32EmitContext& ctx, IR::Inst* inst) {
-    ReadMemory<u8, &A32::UserCallbacks::MemoryRead8>(code, ctx.reg_alloc, inst, config, read_memory_8);
+    ReadMemory<u8>(ctx, inst, read_memory_8);
 }
 
 void A32EmitA64::EmitA32ReadMemory16(A32EmitContext& ctx, IR::Inst* inst) {
-    ReadMemory<u16, &A32::UserCallbacks::MemoryRead16>(code, ctx.reg_alloc, inst, config, read_memory_16);
+    ReadMemory<u16>(ctx, inst, read_memory_16);
 }
 
 void A32EmitA64::EmitA32ReadMemory32(A32EmitContext& ctx, IR::Inst* inst) {
-    ReadMemory<u32, &A32::UserCallbacks::MemoryRead32>(code, ctx.reg_alloc, inst, config, read_memory_32);
+    ReadMemory<u32>(ctx, inst, read_memory_32);
 }
 
 void A32EmitA64::EmitA32ReadMemory64(A32EmitContext& ctx, IR::Inst* inst) {
-    ReadMemory<u64, &A32::UserCallbacks::MemoryRead64>(code, ctx.reg_alloc, inst, config, read_memory_64);
+    ReadMemory<u64>(ctx, inst, read_memory_64);
 }
 
 void A32EmitA64::EmitA32WriteMemory8(A32EmitContext& ctx, IR::Inst* inst) {
-    WriteMemory<u8, &A32::UserCallbacks::MemoryWrite8>(code, ctx.reg_alloc, inst, config, write_memory_8);
+    WriteMemory<u8>(ctx, inst, write_memory_8);
 }
 
 void A32EmitA64::EmitA32WriteMemory16(A32EmitContext& ctx, IR::Inst* inst) {
-    WriteMemory<u16, &A32::UserCallbacks::MemoryWrite16>(code, ctx.reg_alloc, inst, config, write_memory_16);
+    WriteMemory<u16>(ctx, inst, write_memory_16);
 }
 
 void A32EmitA64::EmitA32WriteMemory32(A32EmitContext& ctx, IR::Inst* inst) {
-    WriteMemory<u32, &A32::UserCallbacks::MemoryWrite32>(code, ctx.reg_alloc, inst, config, write_memory_32);
+    WriteMemory<u32>(ctx, inst, write_memory_32);
 }
 
 void A32EmitA64::EmitA32WriteMemory64(A32EmitContext& ctx, IR::Inst* inst) {
-    WriteMemory<u64, &A32::UserCallbacks::MemoryWrite64>(code, ctx.reg_alloc, inst, config, write_memory_64);
+    WriteMemory<u64>(ctx, inst, write_memory_64);
 }
 
 template <typename T, void (A32::UserCallbacks::*fn)(A32::VAddr, T)>
@@ -1239,6 +1382,13 @@ std::string A32EmitA64::LocationDescriptorToFriendlyName(const IR::LocationDescr
     const A32::LocationDescriptor descriptor{ir_descriptor};
     return fmt::format("a32_{}{:08X}_{}_fpcr{:08X}", descriptor.TFlag() ? "t" : "a", descriptor.PC(), descriptor.EFlag() ? "be" : "le",
                        descriptor.FPSCR().Value());
+}
+
+void A32EmitA64::FastmemCallback(CodePtr PC) {
+    const auto iter = fastmem_patch_info.find(PC);
+    ASSERT(iter != fastmem_patch_info.end());
+    iter->second.callback();
+    fastmem_patch_info.erase(iter);
 }
 
 void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDescriptor initial_location) {

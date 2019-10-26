@@ -380,7 +380,9 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/reg_alloc.cpp
          backend/A64/reg_alloc.h
 
-         backend/A64/exception_handler_generic.cpp
+         backend/A64/exception_handler.h
+         #backend/A64/exception_handler_generic.cpp
+         backend/A64/exception_handler_posix.cpp
     )
 else()
     message(FATAL_ERROR "Unsupported architecture")
