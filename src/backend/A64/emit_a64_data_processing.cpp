@@ -480,7 +480,7 @@ void EmitA64::EmitArithmeticShiftRight32(EmitContext& ctx, IR::Inst* inst) {
             // if (Rs & 0xFF == 0) goto end;
             end = code.B(CC_EQ);
             // else {
-            code.MOVI2R(carry, 31);
+            code.MOVI2R(carry, 32);
             code.CMPI2R(shift, u32(31));
             code.CSEL(shift, shift, carry, CC_LE);
             code.SUBI2R(shift, shift, 1);
