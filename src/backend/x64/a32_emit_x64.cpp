@@ -532,7 +532,7 @@ void A32EmitX64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     }
 }
 
-void A32EmitX64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
+void A32EmitX64::EmitA32SetCpsrNZCVRaw(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     if (args[0].IsImmediate()) {
         const u32 imm = args[0].GetImmediateU32();
@@ -555,6 +555,17 @@ void A32EmitX64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
         code.mov(dword[r15 + offsetof(A32JitState, cpsr_nzcv)], a);
     }
 }
+
+void A32EmitX64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
+    auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+    const Xbyak::Reg32 to_store = ctx.reg_alloc.UseScratchGpr(args[0]).cvt32();
+    code.and_(to_store, 0b11000001'00000001);
+    code.imul(to_store, to_store, 0b00010000'00100001);
+    code.shl(to_store, 16);
+    code.and_(to_store, 0xF0000000);
+    code.mov(dword[r15 + offsetof(A32JitState, cpsr_nzcv)], to_store);
+}
+
 
 void A32EmitX64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);

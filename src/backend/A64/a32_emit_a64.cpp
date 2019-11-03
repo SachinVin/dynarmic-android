@@ -424,12 +424,16 @@ void A32EmitA64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     code.QuickCallFunction(&SetCpsrImpl);
 }
 
-void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
+void A32EmitA64::EmitA32SetCpsrNZCVRaw(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     ARM64Reg a = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
 
     code.ANDI2R(a, a, 0xF0000000);
     code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_nzcv));
+}
+
+void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
+    EmitA32SetCpsrNZCVRaw(ctx, inst);
 }
 
 void A32EmitA64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {

@@ -109,6 +109,10 @@ void IREmitter::SetCpsr(const IR::U32& value) {
 }
 
 void IREmitter::SetCpsrNZCV(const IR::U32& value) {
+    Inst(Opcode::A32SetCpsrNZCVRaw, value);
+}
+
+void IREmitter::SetCpsrNZCV(const IR::NZCV& value) {
     Inst(Opcode::A32SetCpsrNZCV, value);
 }
 
