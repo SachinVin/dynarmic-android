@@ -667,15 +667,6 @@ static Arm64Gen::ARM64Reg DoCarry(RegAlloc& reg_alloc, Argument& carry_in, IR::I
     }
 }
 
-static Arm64Gen::ARM64Reg DoNZCV(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* nzcv_out) {
-    if (!nzcv_out)
-        return INVALID_REG;
-
-    Arm64Gen::ARM64Reg nzcv = reg_alloc.ScratchGpr();
-    code.MOVI2R(nzcv, 0);
-    return nzcv;
-}
-
 static void EmitAdd(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bitsize) {
     auto carry_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetCarryFromOp);
     auto overflow_inst = inst->GetAssociatedPseudoOperation(IR::Opcode::GetOverflowFromOp);
@@ -684,7 +675,7 @@ static void EmitAdd(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bit
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     auto& carry_in = args[2];
 
-    Arm64Gen::ARM64Reg nzcv = DoNZCV(code, ctx.reg_alloc, nzcv_inst);
+    Arm64Gen::ARM64Reg nzcv = nzcv_inst ? ctx.reg_alloc.ScratchGpr() : INVALID_REG;
     Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
     Arm64Gen::ARM64Reg carry = DecodeReg(DoCarry(ctx.reg_alloc, carry_in, carry_inst));
     Arm64Gen::ARM64Reg overflow = overflow_inst ? ctx.reg_alloc.ScratchGpr() : INVALID_REG;
@@ -756,7 +747,7 @@ static void EmitSub(BlockOfCode& code, EmitContext& ctx, IR::Inst* inst, int bit
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     auto& carry_in = args[2];
 
-    Arm64Gen::ARM64Reg nzcv = DoNZCV(code, ctx.reg_alloc, nzcv_inst);
+    Arm64Gen::ARM64Reg nzcv = nzcv_inst ? ctx.reg_alloc.ScratchGpr() : INVALID_REG;
     Arm64Gen::ARM64Reg result = ctx.reg_alloc.UseScratchGpr(args[0]);
     Arm64Gen::ARM64Reg carry = DoCarry(ctx.reg_alloc, carry_in, carry_inst);
     Arm64Gen::ARM64Reg overflow = overflow_inst ? ctx.reg_alloc.ScratchGpr() : INVALID_REG;
