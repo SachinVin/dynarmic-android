@@ -149,7 +149,8 @@ void BlockOfCode::ForceReturnFromRunCode(bool fpscr_already_exited) {
 void BlockOfCode::GenRunCode() {
     const u8* loop, *enter_fpscr_then_loop;
 
-    run_code_from = (RunCodeFromFuncType) const_cast<u8*>(AlignCode16());
+    AlignCode16();
+    run_code_from = (RunCodeFromFuncType) GetWritableCodePtr();
 
     ABI_PushCalleeSaveRegistersAndAdjustStack(*this);
 
@@ -164,7 +165,8 @@ void BlockOfCode::GenRunCode() {
     SwitchFpscrOnEntry();
     BR(Arm64Gen::X27);
 
-    run_code = (RunCodeFuncType) const_cast<u8*>(AlignCode16());
+    AlignCode16();
+    run_code = (RunCodeFuncType) GetWritableCodePtr();
 
     // This serves two purposes:
     // 1. It saves all the registers we as a callee need to save.
@@ -292,7 +294,7 @@ CodePtr BlockOfCode::GetCodeBegin() const {
 void* BlockOfCode::AllocateFromCodeSpace(size_t alloc_size) {    
     ASSERT_MSG(GetSpaceLeft() >= alloc_size, "ERR_CODE_IS_TOO_BIG");
 
-    void* ret = const_cast<u8*>(GetCodePtr());
+    void* ret = GetWritableCodePtr();
     region_size += alloc_size;
     SetCodePtr(GetCodePtr() + alloc_size);
     memset(ret, 0, alloc_size);    
