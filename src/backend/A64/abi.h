@@ -23,7 +23,7 @@ constexpr HostLoc ABI_PARAM6 = HostLoc::X5;
 constexpr HostLoc ABI_PARAM7 = HostLoc::X6;
 constexpr HostLoc ABI_PARAM8 = HostLoc::X7;
 
-constexpr std::array<HostLoc, 36> ABI_ALL_CALLER_SAVE = {  
+constexpr std::array<HostLoc, 43> ABI_ALL_CALLER_SAVE = {  
     HostLoc::X0,
     HostLoc::X1,
     HostLoc::X2,
@@ -52,31 +52,8 @@ constexpr std::array<HostLoc, 36> ABI_ALL_CALLER_SAVE = {
     HostLoc::Q5,
     HostLoc::Q6,
     HostLoc::Q7,
-    HostLoc::Q8,
-    HostLoc::Q9,
-    HostLoc::Q10,
-    HostLoc::Q11,
-    HostLoc::Q12,
-    HostLoc::Q13,
-    HostLoc::Q14,
-    HostLoc::Q15,
+   
     HostLoc::Q16,
-};
-
-constexpr std::array<HostLoc, 27> ABI_ALL_CALLEE_SAVE = {
-    HostLoc::X19,
-    HostLoc::X20,
-    HostLoc::X21,
-    HostLoc::X22,
-    HostLoc::X23,
-    HostLoc::X24,
-    HostLoc::X25,
-    HostLoc::X26,
-    HostLoc::X27,
-    HostLoc::X28,
-    HostLoc::X29,
-    HostLoc::X30,
-
     HostLoc::Q17,
     HostLoc::Q18,
     HostLoc::Q19,
@@ -92,6 +69,30 @@ constexpr std::array<HostLoc, 27> ABI_ALL_CALLEE_SAVE = {
     HostLoc::Q29,
     HostLoc::Q30,
     HostLoc::Q31,
+};
+
+constexpr std::array<HostLoc, 20> ABI_ALL_CALLEE_SAVE = {
+    HostLoc::X19,
+    HostLoc::X20,
+    HostLoc::X21,
+    HostLoc::X22,
+    HostLoc::X23,
+    HostLoc::X24,
+    HostLoc::X25,
+    HostLoc::X26,
+    HostLoc::X27,
+    HostLoc::X28,
+    HostLoc::X29,
+    HostLoc::X30,
+
+    HostLoc::Q8,
+    HostLoc::Q9,
+    HostLoc::Q10,
+    HostLoc::Q11,
+    HostLoc::Q12,
+    HostLoc::Q13,
+    HostLoc::Q14,
+    HostLoc::Q15,
 };
 
 constexpr size_t ABI_SHADOW_SPACE = 0; // bytes
