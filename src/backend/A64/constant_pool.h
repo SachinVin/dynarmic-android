@@ -20,11 +20,7 @@ class BlockOfCode;
 /// already exists, its memory location is reused.
 class ConstantPool final {
 public:
-    ConstantPool(BlockOfCode& code, size_t size);
-
-    void AllocatePool();
-
-    u64 GetConstant(u64 lower, u64 upper = 0);
+    ConstantPool(BlockOfCode& code);
 
     void EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper = 0);
 
@@ -32,17 +28,12 @@ public:
 
     void Clear();
 
-
-
 private:
     static constexpr size_t align_size = 16; // bytes
 
     std::map<std::tuple<u64, u64>, void*> constant_info;
 
     BlockOfCode& code;
-    size_t pool_size;
-    u8* pool_begin;
-    u8* current_pool_ptr;
 
     struct PatchInfo {
         const void* ptr;
