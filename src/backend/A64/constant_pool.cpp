@@ -12,28 +12,7 @@
 
 namespace Dynarmic::BackendA64 {
 
-ConstantPool::ConstantPool(BlockOfCode& code, size_t size) : code(code), pool_size(size) {}
-
-void ConstantPool::AllocatePool() {
-    code.BRK(0);
-    pool_begin = const_cast<u8*>(code.AlignCode16());
-    code.AllocateFromCodeSpace(pool_size);
-    current_pool_ptr = pool_begin;
-    ASSERT(code.GetCodePtr() - pool_begin == static_cast<u32>(pool_size));
-}
-
-u64 ConstantPool::GetConstant(u64 lower, u64 upper) {
-    const auto constant = std::make_tuple(lower, upper);
-    auto iter = constant_info.find(constant);
-    if (iter == constant_info.end()) {
-        ASSERT(static_cast<size_t>(current_pool_ptr - pool_begin) < pool_size);
-        std::memcpy(current_pool_ptr, &lower, sizeof(u64));
-        std::memcpy(current_pool_ptr + sizeof(u64), &upper, sizeof(u64));
-        iter = constant_info.emplace(constant, current_pool_ptr).first;
-        current_pool_ptr += align_size;
-    }
-    return reinterpret_cast<u64>(iter->second) - reinterpret_cast<u64>(code.GetCodePtr());
-}
+ConstantPool::ConstantPool(BlockOfCode& code) : code(code) {}
 
 void ConstantPool::EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper) {
     const auto constant = std::make_tuple(lower, upper);
@@ -59,8 +38,7 @@ void ConstantPool::EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper) {
 }
 
 void ConstantPool::PatchPool() {
-
-    u8* pool_ptr = const_cast<u8*>(code.GetCodePtr());
+    u8* pool_ptr = code.GetWritableCodePtr();
     for (PatchInfo patch : patch_info) {
         std::memcpy(pool_ptr, &std::get<0>(patch.constant), sizeof(u64));
         std::memcpy(pool_ptr + sizeof(u64), &std::get<1>(patch.constant), sizeof(u64));
@@ -81,4 +59,4 @@ void  ConstantPool::Clear() {
     patch_info.clear();
 }
 
-} // namespace Dynarmic::BackendX64
+} // namespace Dynarmic::BackendA64
