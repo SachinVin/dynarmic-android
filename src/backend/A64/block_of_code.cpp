@@ -45,7 +45,6 @@ namespace {
 
 constexpr size_t TOTAL_CODE_SIZE = 128 * 1024 * 1024;
 constexpr size_t FAR_CODE_OFFSET = 100 * 1024 * 1024;
-constexpr size_t CONSTANT_POOL_SIZE = 512 * 1024;
 
 #ifdef DYNARMIC_ENABLE_NO_EXECUTE_SUPPORT
 void ProtectMemory(const void* base, size_t size, bool is_executable) {
@@ -68,9 +67,8 @@ BlockOfCode::BlockOfCode(RunCodeCallbacks cb, JitStateInfo jsi)
         : fp_emitter(this)
         , cb(std::move(cb))
         , jsi(jsi)
-        , constant_pool(*this, CONSTANT_POOL_SIZE) {
+        , constant_pool(*this) {
     AllocCodeSpace(TOTAL_CODE_SIZE);
-    constant_pool.AllocatePool();
     EnableWriting();
     GenRunCode();
     exception_handler.Register(*this);
@@ -260,12 +258,8 @@ void BlockOfCode::LookupBlock() {
     cb.LookupBlock->EmitCall(*this);
 }
 
-u64 BlockOfCode::MConst(u64 lower, u64 upper) {
-    return constant_pool.GetConstant(lower, upper);
-}
-
 void BlockOfCode::EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper) {
-    ASSERT_MSG(!in_far_code, "Can't patch when in far code");
+    ASSERT_MSG(!in_far_code, "Can't patch when in far code, yet!");
     constant_pool.EmitPatchLDR(Rt, lower, upper);
 }
 
