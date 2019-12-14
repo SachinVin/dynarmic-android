@@ -149,9 +149,7 @@ void EmitA64::EmitNZCVFromPackedFlags(EmitContext& ctx, IR::Inst* inst) {
 
 void EmitA64::EmitAddCycles(size_t cycles) {
     ASSERT(cycles < std::numeric_limits<u32>::max());
-    code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, X28, code.GetJitStateInfo().offsetof_cycles_remaining);
-    code.SUBI2R(code.ABI_SCRATCH1, code.ABI_SCRATCH1, static_cast<u32>(cycles));
-    code.STR(INDEX_UNSIGNED, code.ABI_SCRATCH1, X28, code.GetJitStateInfo().offsetof_cycles_remaining);
+    code.SUBI2R(X26, X26, static_cast<u32>(cycles));
 }
 
 FixupBranch EmitA64::EmitCond(IR::Cond cond) {

@@ -131,13 +131,14 @@ inline size_t HostLocBitWidth(HostLoc loc) {
 using HostLocList = std::initializer_list<HostLoc>;
 
 // X18 may be reserved.(Windows and iOS)
+// X26 holds the cycle counter
 // X27 contains an emulated memory relate pointer
 // X28 used for holding the JitState.
 // X30 is the link register.
 // In order of desireablity based first on ABI
 constexpr HostLocList any_gpr = {
     HostLoc::X19, HostLoc::X20, HostLoc::X21, HostLoc::X22, HostLoc::X23,
-    HostLoc::X24, HostLoc::X25, HostLoc::X26,
+    HostLoc::X24, HostLoc::X25,
 
     HostLoc::X8,  HostLoc::X9,  HostLoc::X10, HostLoc::X11, HostLoc::X12,
     HostLoc::X13, HostLoc::X14, HostLoc::X15, HostLoc::X16, HostLoc::X17,
