@@ -983,9 +983,9 @@ static void CallCoprocCallback(BlockOfCode& code, RegAlloc& reg_alloc, A32::Jit*
                                IR::Inst* inst = nullptr, std::optional<Argument::copyable_reference> arg0 = {}, std::optional<Argument::copyable_reference> arg1 = {}) {
     reg_alloc.HostCall(inst, {}, {}, arg0, arg1);
 
-    code.MOVI2R(code.ABI_PARAM1, reinterpret_cast<u64>(jit_interface));
+    code.MOVP2R(code.ABI_PARAM1, jit_interface);
     if (callback.user_arg) {
-        code.MOVI2R(code.ABI_PARAM2, reinterpret_cast<u64>(*callback.user_arg));
+        code.MOVP2R(code.ABI_PARAM2, *callback.user_arg);
     }
 
     code.QuickCallFunction(callback.function);
@@ -1048,7 +1048,7 @@ void A32EmitA64::EmitA32CoprocSendOneWord(A32EmitContext& ctx, IR::Inst* inst) {
         ARM64Reg reg_word = DecodeReg(ctx.reg_alloc.UseGpr(args[1]));
         ARM64Reg reg_destination_addr = ctx.reg_alloc.ScratchGpr();
 
-        code.MOVI2R(reg_destination_addr, reinterpret_cast<u64>(destination_ptr));
+        code.MOVP2R(reg_destination_addr, destination_ptr);
         code.STR(INDEX_UNSIGNED, reg_word, reg_destination_addr, 0);
 
         return;
@@ -1088,9 +1088,9 @@ void A32EmitA64::EmitA32CoprocSendTwoWords(A32EmitContext& ctx, IR::Inst* inst) 
         ARM64Reg reg_word2 = DecodeReg(ctx.reg_alloc.UseGpr(args[2]));
         ARM64Reg reg_destination_addr = ctx.reg_alloc.ScratchGpr();
 
-        code.MOVI2R(reg_destination_addr, reinterpret_cast<u64>(destination_ptrs[0]));
+        code.MOVP2R(reg_destination_addr, destination_ptrs[0]);
         code.STR(INDEX_UNSIGNED, reg_word1, reg_destination_addr, 0);
-        code.MOVI2R(reg_destination_addr, reinterpret_cast<u64>(destination_ptrs[1]));
+        code.MOVP2R(reg_destination_addr, destination_ptrs[1]);
         code.STR(INDEX_UNSIGNED, reg_word2, reg_destination_addr, 0);
 
         return;
@@ -1127,13 +1127,12 @@ void A32EmitA64::EmitA32CoprocGetOneWord(A32EmitContext& ctx, IR::Inst* inst) {
     case 2: {
         u32* source_ptr = std::get<u32*>(action);
 
-        ARM64Reg reg_word = DecodeReg(ctx.reg_alloc.ScratchGpr());
-        ARM64Reg reg_source_addr = ctx.reg_alloc.ScratchGpr();
+        ARM64Reg result = ctx.reg_alloc.ScratchGpr();
 
-        code.MOVI2R(reg_source_addr, reinterpret_cast<u64>(source_ptr));
-        code.LDR(INDEX_UNSIGNED, reg_word, reg_source_addr, 0);
+        code.MOVP2R(result, source_ptr);
+        code.LDR(INDEX_UNSIGNED, DecodeReg(result), result, 0);
 
-        ctx.reg_alloc.DefineValue(inst, reg_word);
+        ctx.reg_alloc.DefineValue(inst, result);
 
         return;
     }
@@ -1168,13 +1167,12 @@ void A32EmitA64::EmitA32CoprocGetTwoWords(A32EmitContext& ctx, IR::Inst* inst) {
         auto source_ptrs = std::get<std::array<u32*, 2>>(action);
 
         ARM64Reg reg_result = ctx.reg_alloc.ScratchGpr();
-        ARM64Reg reg_destination_addr = ctx.reg_alloc.ScratchGpr();
         ARM64Reg reg_tmp = ctx.reg_alloc.ScratchGpr();
 
-        code.MOVI2R(reg_destination_addr, reinterpret_cast<u64>(source_ptrs[1]));
-        code.LDR(INDEX_UNSIGNED, DecodeReg(reg_result), reg_destination_addr, 0);
-        code.MOVI2R(reg_destination_addr, reinterpret_cast<u64>(source_ptrs[0]));
-        code.LDR(INDEX_UNSIGNED, DecodeReg(reg_tmp), reg_destination_addr, 0);
+        code.MOVP2R(reg_tmp, source_ptrs[1]);
+        code.LDR(INDEX_UNSIGNED, DecodeReg(reg_result), reg_tmp, 0);
+        code.MOVP2R(reg_tmp, source_ptrs[0]);
+        code.LDR(INDEX_UNSIGNED, DecodeReg(reg_tmp), reg_tmp, 0);
         code.ORR(reg_result, reg_tmp, reg_result, ArithOption{ reg_result , ST_LSL, 32});
 
         ctx.reg_alloc.DefineValue(inst, reg_result);
