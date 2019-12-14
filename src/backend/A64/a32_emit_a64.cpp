@@ -695,13 +695,10 @@ void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
 
 void A32EmitA64::EmitA32CallSupervisor(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(nullptr);
-    // Use an unused HostCall register
-    ARM64Reg cycles_remaining = X9;
 
     code.SwitchFpscrOnExit();
     code.LDR(INDEX_UNSIGNED, code.ABI_PARAM2, X28, offsetof(A32JitState, cycles_to_run));
-    code.LDR(INDEX_UNSIGNED, cycles_remaining, X28, offsetof(A32JitState, cycles_remaining));
-    code.SUB(code.ABI_PARAM2, code.ABI_PARAM2, cycles_remaining);
+    code.SUB(code.ABI_PARAM2, code.ABI_PARAM2, X26);
 
     Devirtualize<&A32::UserCallbacks::AddTicks>(config.callbacks).EmitCall(code);
     ctx.reg_alloc.EndOfAllocScope();
@@ -710,7 +707,7 @@ void A32EmitA64::EmitA32CallSupervisor(A32EmitContext& ctx, IR::Inst* inst) {
     Devirtualize<&A32::UserCallbacks::CallSVC>(config.callbacks).EmitCall(code);
     Devirtualize<&A32::UserCallbacks::GetTicksRemaining>(config.callbacks).EmitCall(code);
     code.STR(INDEX_UNSIGNED, code.ABI_RETURN, X28, offsetof(A32JitState, cycles_to_run));
-    code.STR(INDEX_UNSIGNED, code.ABI_RETURN, X28, offsetof(A32JitState, cycles_remaining));
+    code.MOV(X26, code.ABI_RETURN);
     code.SwitchFpscrOnEntry();
 }
 
@@ -1427,8 +1424,7 @@ void A32EmitA64::EmitSetUpperLocationDescriptor(IR::LocationDescriptor new_locat
 void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDescriptor initial_location) {
     EmitSetUpperLocationDescriptor(terminal.next, initial_location);
 
-    code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, X28, offsetof(A32JitState, cycles_remaining));
-    code.CMP(code.ABI_SCRATCH1, ZR);
+    code.CMP(X26, ZR);
 
     patch_information[terminal.next].jg.emplace_back(code.GetCodePtr());
     if (auto next_bb = GetBasicBlock(terminal.next)) {
