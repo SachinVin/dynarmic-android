@@ -155,15 +155,15 @@ void BlockOfCode::GenRunCode() {
 
     MOV(Arm64Gen::X28, ABI_PARAM1);
     MOVI2R(Arm64Gen::X27, cb.value_in_X27);
-    MOV(Arm64Gen::X26, ABI_PARAM2); // save temporarily in non-volatile register
+    MOV(Arm64Gen::X25, ABI_PARAM2); // save temporarily in non-volatile register
 
     cb.GetTicksRemaining->EmitCall(*this);
 
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
-    STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
+    MOV(Arm64Gen::X26, ABI_RETURN);
 
     SwitchFpscrOnEntry();
-    BR(Arm64Gen::X26);
+    BR(Arm64Gen::X25);
 
     AlignCode16();
     run_code = (RunCodeFuncType) GetWritableCodePtr();
@@ -179,7 +179,7 @@ void BlockOfCode::GenRunCode() {
 
     cb.GetTicksRemaining->EmitCall(*this);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
-    STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
+    MOV(Arm64Gen::X26, ABI_RETURN);
 
     enter_fpscr_then_loop = GetCodePtr();
     SwitchFpscrOnEntry();
@@ -191,8 +191,7 @@ void BlockOfCode::GenRunCode() {
     // Return from run code variants
     const auto emit_return_from_run_code = [this, &loop, &enter_fpscr_then_loop](bool fpscr_already_exited, bool force_return){
         if (!force_return) {
-            LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
-            CMP(ABI_SCRATCH1, Arm64Gen::ZR);
+            CMP(Arm64Gen::X26, Arm64Gen::ZR);
             B(CC_GT, fpscr_already_exited ? enter_fpscr_then_loop : loop);
         }
 
@@ -202,8 +201,7 @@ void BlockOfCode::GenRunCode() {
 
         cb.AddTicks->EmitCall(*this, [this](RegList param) {
             LDR(Arm64Gen::INDEX_UNSIGNED, param[0], Arm64Gen::X28, jsi.offsetof_cycles_to_run);
-            LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
-            SUBS(param[0], param[0], ABI_SCRATCH1);
+            SUB(param[0], param[0], Arm64Gen::X26);
         });
 
         ABI_PopCalleeSaveRegistersAndAdjustStack(*this);
@@ -248,13 +246,12 @@ void BlockOfCode::SwitchFpscrOnExit() {
 void BlockOfCode::UpdateTicks() {
     cb.AddTicks->EmitCall(*this, [this](RegList param) {
         LDR(Arm64Gen::INDEX_UNSIGNED, param[0], Arm64Gen::X28, jsi.offsetof_cycles_to_run);
-        LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
-        SUBS(param[0], param[0], ABI_SCRATCH1);
+        SUB(param[0], param[0], Arm64Gen::X26);
     });
 
     cb.GetTicksRemaining->EmitCall(*this);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
-    STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_remaining);
+    MOV(Arm64Gen::X26, ABI_RETURN);
 }
 
 void BlockOfCode::LookupBlock() {
