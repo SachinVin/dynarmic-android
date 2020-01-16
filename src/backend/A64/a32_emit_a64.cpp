@@ -408,7 +408,8 @@ void A32EmitA64::EmitA32SetCpsr(A32EmitContext& ctx, IR::Inst* inst) {
     // TODO:Inline
     ctx.reg_alloc.HostCall(nullptr, args[0]);
 
-    ARM64Reg host_fpsr = ctx.reg_alloc.ScratchGpr();
+    // Use an unused HostCall register
+    ARM64Reg host_fpsr = X9;
     
     if (config.always_little_endian) {
         code.ANDI2R(code.ABI_PARAM1, code.ABI_PARAM1, 0xFFFFFDFF, ctx.reg_alloc.ScratchGpr());
@@ -700,7 +701,8 @@ void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
 
 void A32EmitA64::EmitA32CallSupervisor(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(nullptr);
-    ARM64Reg cycles_remaining = ctx.reg_alloc.ScratchGpr();
+    // Use an unused HostCall register
+    ARM64Reg cycles_remaining = X9;
 
     code.SwitchFpscrOnExit();
     code.LDR(INDEX_UNSIGNED, code.ABI_PARAM2, X28, offsetof(A32JitState, cycles_to_run));
@@ -736,7 +738,8 @@ static u32 GetFpscrImpl(A32JitState* jit_state) {
 
 void A32EmitA64::EmitA32GetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(inst);
-    ARM64Reg fpsr = ctx.reg_alloc.ScratchGpr();
+    // Use an unused HostCall register
+    ARM64Reg fpsr = X9;
     code.MOV(code.ABI_PARAM1, X28);
 
     code.MRS(fpsr, FIELD_FPSR);
@@ -751,7 +754,8 @@ static void SetFpscrImpl(u32 value, A32JitState* jit_state) {
 void A32EmitA64::EmitA32SetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     ctx.reg_alloc.HostCall(nullptr, args[0]);
-    ARM64Reg fpsr = ctx.reg_alloc.ScratchGpr();
+    // Use an unused HostCall register
+    ARM64Reg fpsr = X9;
 
     code.MOV(code.ABI_PARAM2, X28);
 
@@ -932,8 +936,9 @@ static void ExclusiveWrite(BlockOfCode& code, RegAlloc& reg_alloc, IR::Inst* ins
     } else {
         reg_alloc.HostCall(nullptr, {}, args[0], args[1]);
     }
-    Arm64Gen::ARM64Reg passed = DecodeReg(reg_alloc.ScratchGpr());
-    Arm64Gen::ARM64Reg tmp = DecodeReg(reg_alloc.ScratchGpr());
+    // Use unused HostCall registers
+    ARM64Reg passed = W9;
+    ARM64Reg tmp = W10;
 
     std::vector<FixupBranch> end;
 
