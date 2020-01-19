@@ -228,17 +228,17 @@ void BlockOfCode::SwitchFpscrOnEntry() {
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPCR);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_save_host_FPCR);
     
-    LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPCR);
+    LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_fpcr);
     _MSR(Arm64Gen::FIELD_FPCR, ABI_SCRATCH1);
-    LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPSR);
+    LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_fpsr);
     _MSR(Arm64Gen::FIELD_FPSR, ABI_SCRATCH1);    
 }
 
 void BlockOfCode::SwitchFpscrOnExit() {
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPCR);
-    STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPCR);
+    STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_fpcr);
     MRS(ABI_SCRATCH1, Arm64Gen::FIELD_FPSR);
-    STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_FPSR);
+    STR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_guest_fpsr);
 
     LDR(Arm64Gen::INDEX_UNSIGNED, ABI_SCRATCH1, Arm64Gen::X28, jsi.offsetof_save_host_FPCR);
     _MSR(Arm64Gen::FIELD_FPCR, ABI_SCRATCH1);

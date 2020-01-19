@@ -120,7 +120,7 @@ static void EmitConditionalSelect(BlockOfCode& code, EmitContext& ctx, IR::Inst*
     then_ = bitsize == 64 ? then_ : DecodeReg(then_);
     else_ = bitsize == 64 ? else_ : DecodeReg(else_);
 
-    code.LDR(INDEX_UNSIGNED, DecodeReg(nzcv), X28, code.GetJitStateInfo().offsetof_CPSR_nzcv);
+    code.LDR(INDEX_UNSIGNED, DecodeReg(nzcv), X28, code.GetJitStateInfo().offsetof_cpsr_nzcv);
     // TODO: Flag optimization
     code._MSR(FIELD_NZCV, nzcv);
 
