@@ -264,12 +264,9 @@ void A32EmitA64::GenTerminalHandlers() {
     // PC ends up in fast_dispatch_entry_reg, location_descriptor ends up in location_descriptor_reg.
     const auto calculate_location_descriptor = [this, fast_dispatch_entry_reg, location_descriptor_reg] {
         // This calculation has to match up with IREmitter::PushRSB
-        // TODO: Optimization is available here based on known state of FPSCR_mode and CPSR_et.
-        code.LDR(INDEX_UNSIGNED, DecodeReg(location_descriptor_reg), X28, offsetof(A32JitState, FPSCR_mode));
-        code.LDR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_et));
-        code.ORR(DecodeReg(location_descriptor_reg), DecodeReg(location_descriptor_reg), DecodeReg(code.ABI_SCRATCH1));
+        code.LDR(INDEX_UNSIGNED, DecodeReg(location_descriptor_reg), X28, offsetof(A32JitState, upper_location_descriptor));
         code.LDR(INDEX_UNSIGNED, DecodeReg(fast_dispatch_entry_reg), X28, MJitStateReg(A32::Reg::PC));
-        code.ORR(location_descriptor_reg, location_descriptor_reg, fast_dispatch_entry_reg, ArithOption{fast_dispatch_entry_reg, ST_LSL, 32});
+        code.ORR(location_descriptor_reg, fast_dispatch_entry_reg, location_descriptor_reg, ArithOption{location_descriptor_reg, ST_LSL, 32});
     };
 
     FixupBranch fast_dispatch_cache_miss, rsb_cache_miss;
@@ -430,7 +427,7 @@ void A32EmitA64::EmitA32SetCpsrNZCVRaw(A32EmitContext& ctx, IR::Inst* inst) {
     ARM64Reg a = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
 
     code.ANDI2R(a, a, 0xF0000000);
-    code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, cpsr_nzcv));
 }
 
 void A32EmitA64::EmitA32SetCpsrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
@@ -445,17 +442,17 @@ void A32EmitA64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {
         ARM64Reg a = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
         code.MOVI2R(a, u32(imm & 0xF0000000));
-        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_nzcv));
+        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, cpsr_nzcv));
         code.MOVI2R(a, u8((imm & 0x08000000) != 0 ? 1 : 0));
-        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_q));
+        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, cpsr_q));
     } else {
         ARM64Reg a = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
         ARM64Reg q = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
         code.UBFX(q, a, 27, 1);
-        code.STR(INDEX_UNSIGNED, q, X28, offsetof(A32JitState, CPSR_q));
+        code.STR(INDEX_UNSIGNED, q, X28, offsetof(A32JitState, cpsr_q));
         code.ANDI2R(a, a, 0xF0000000);
-        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_nzcv));
+        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, cpsr_nzcv));
     }
 
     // Since this is one of the only places where the ~sticky~ 
@@ -468,7 +465,7 @@ void A32EmitA64::EmitA32SetCpsrNZCVQ(A32EmitContext& ctx, IR::Inst* inst) {
 
 void A32EmitA64::EmitA32GetNFlag(A32EmitContext& ctx, IR::Inst* inst) {
     Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
-    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, cpsr_nzcv));
     code.UBFX(result, result, 31, 1);
     ctx.reg_alloc.DefineValue(inst, result);
 }
@@ -479,7 +476,7 @@ void A32EmitA64::EmitA32SetNFlag(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     Arm64Gen::ARM64Reg nzcv = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
     if (args[0].IsImmediate()) {
         if (args[0].GetImmediateU1()) {
             code.ORRI2R(nzcv, nzcv, flag_mask);
@@ -491,12 +488,12 @@ void A32EmitA64::EmitA32SetNFlag(A32EmitContext& ctx, IR::Inst* inst) {
 
         code.BFI(nzcv, to_store, flag_bit, 1);
     }
-    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
 }
 
 void A32EmitA64::EmitA32GetZFlag(A32EmitContext& ctx, IR::Inst* inst) {
     Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
-    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, cpsr_nzcv));
     code.UBFX(result, result, 30, 1);
     ctx.reg_alloc.DefineValue(inst, result);
 }
@@ -507,7 +504,7 @@ void A32EmitA64::EmitA32SetZFlag(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     Arm64Gen::ARM64Reg nzcv = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
     if (args[0].IsImmediate()) {
         if (args[0].GetImmediateU1()) {
             code.ORRI2R(nzcv, nzcv, flag_mask);
@@ -519,7 +516,7 @@ void A32EmitA64::EmitA32SetZFlag(A32EmitContext& ctx, IR::Inst* inst) {
 
         code.BFI(nzcv, to_store, flag_bit, 1);
     }
-    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
 }
 
 void A32EmitA64::EmitA32SetCheckBit(A32EmitContext& ctx, IR::Inst* inst) {
@@ -530,7 +527,7 @@ void A32EmitA64::EmitA32SetCheckBit(A32EmitContext& ctx, IR::Inst* inst) {
 
 void A32EmitA64::EmitA32GetCFlag(A32EmitContext& ctx, IR::Inst* inst) {
     Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
-    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, cpsr_nzcv));
     code.UBFX(result, result, 29, 1);
     ctx.reg_alloc.DefineValue(inst, result);
 }
@@ -541,7 +538,7 @@ void A32EmitA64::EmitA32SetCFlag(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     Arm64Gen::ARM64Reg nzcv = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
     if (args[0].IsImmediate()) {
         if (args[0].GetImmediateU1()) {
             code.ORRI2R(nzcv, nzcv, flag_mask);
@@ -552,12 +549,12 @@ void A32EmitA64::EmitA32SetCFlag(A32EmitContext& ctx, IR::Inst* inst) {
         Arm64Gen::ARM64Reg to_store = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
         code.BFI(nzcv, to_store, flag_bit, 1);
     }
-    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
 }
 
 void A32EmitA64::EmitA32GetVFlag(A32EmitContext& ctx, IR::Inst* inst) {
     Arm64Gen::ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
-    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, cpsr_nzcv));
     code.UBFX(result, result, 28, 1);
     ctx.reg_alloc.DefineValue(inst, result);
 }
@@ -568,7 +565,7 @@ void A32EmitA64::EmitA32SetVFlag(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     Arm64Gen::ARM64Reg nzcv = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.LDR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
     if (args[0].IsImmediate()) {
         if (args[0].GetImmediateU1()) {
             code.ORRI2R(nzcv, nzcv, flag_mask);
@@ -580,7 +577,7 @@ void A32EmitA64::EmitA32SetVFlag(A32EmitContext& ctx, IR::Inst* inst) {
 
         code.BFI(nzcv, to_store, flag_bit, 1);
     }
-    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, CPSR_nzcv));
+    code.STR(INDEX_UNSIGNED, nzcv, X28, offsetof(A32JitState, cpsr_nzcv));
 }
 
 void A32EmitA64::EmitA32OrQFlag(A32EmitContext& ctx, IR::Inst* inst) {
@@ -588,21 +585,21 @@ void A32EmitA64::EmitA32OrQFlag(A32EmitContext& ctx, IR::Inst* inst) {
     if (args[0].IsImmediate()) {
         if (args[0].GetImmediateU1()) {
             ARM64Reg to_store = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
-            code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, CPSR_q));
+            code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, cpsr_q));
         }
     } else {
         ARM64Reg to_store = ctx.reg_alloc.UseGpr(args[0]);
         ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-        code.LDR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, CPSR_q));
+        code.LDR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, cpsr_q));
         code.ORR(scratch, scratch, to_store);
-        code.STR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, CPSR_q));
+        code.STR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, cpsr_q));
     }
 }
 
 void A32EmitA64::EmitA32GetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
     ARM64Reg result = EncodeRegToSingle(ctx.reg_alloc.ScratchFpr());
-    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, CPSR_ge));
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, cpsr_ge));
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
@@ -615,7 +612,7 @@ void A32EmitA64::EmitA32SetGEFlags(A32EmitContext& ctx, IR::Inst* inst) {
     } else {
         to_store = DecodeReg(ctx.reg_alloc.UseGpr(args[0]));
     }
-    code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, CPSR_ge));
+    code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, cpsr_ge));
 }
 
 void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst) {
@@ -630,7 +627,7 @@ void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst
         ge |= Common::Bit<16>(imm) ? 0x000000FF : 0;
 
         code.MOVI2R(to_store, ge);
-        code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, CPSR_ge));
+        code.STR(INDEX_UNSIGNED, to_store, X28, offsetof(A32JitState, cpsr_ge));
     } else {
         ARM64Reg a = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
         ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
@@ -642,13 +639,15 @@ void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst
         code.ANDI2R(a, a, 0x01010101, scratch);
         code.MOVI2R(scratch, 0xFF);
         code.MUL(a, a, scratch);
-        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, CPSR_ge));
+        code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, cpsr_ge));
     }
 }
 
 void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     auto& arg = args[0];
+
+    const u32 upper_without_t = (ctx.Location().UniqueHash() >> 32) & 0xFFFFFFFE;
 
     // Pseudocode:
     // if (new_pc & 1) {
@@ -661,41 +660,28 @@ void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
     // We rely on the fact we disallow EFlag from changing within a block.
     
     if (arg.IsImmediate()) {
-        ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
+        const ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
         u32 new_pc = arg.GetImmediateU32();
-        u32 mask = Common::Bit<0>(new_pc) ? 0xFFFFFFFE : 0xFFFFFFFC;
-        u32 et = 0;
-        et |= ctx.Location().EFlag() ? 2 : 0;
-        et |= Common::Bit<0>(new_pc) ? 1 : 0;
+        const u32 mask = Common::Bit<0>(new_pc) ? 0xFFFFFFFE : 0xFFFFFFFC;
+        const u32 new_upper = upper_without_t | (Common::Bit<0>(new_pc) ? 1 : 0);
 
         code.MOVI2R(scratch, new_pc & mask);
         code.STR(INDEX_UNSIGNED, scratch, X28, MJitStateReg(A32::Reg::PC));
-        code.MOVI2R(scratch, et);
-        code.STR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, CPSR_et));
+        code.MOVI2R(scratch, new_upper);
+        code.STR(INDEX_UNSIGNED, scratch, X28, offsetof(A32JitState, upper_location_descriptor));
     } else {
-        if (ctx.Location().EFlag()) {
-            ARM64Reg new_pc = DecodeReg(ctx.reg_alloc.UseScratchGpr(arg));
-            ARM64Reg mask = DecodeReg(ctx.reg_alloc.ScratchGpr());
-            ARM64Reg et = DecodeReg(ctx.reg_alloc.ScratchGpr());
+        const ARM64Reg new_pc = DecodeReg(ctx.reg_alloc.UseScratchGpr(arg));
+        const ARM64Reg mask = DecodeReg(ctx.reg_alloc.ScratchGpr());
+        const ARM64Reg new_upper = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-            code.ANDI2R(mask, new_pc, 1);
-            code.ADDI2R(et, mask, 2);
-            code.STR(INDEX_UNSIGNED, et, X28, offsetof(A32JitState, CPSR_et));
-            code.LSL(mask, mask, 1);
-            code.SUB(mask, mask, 4); // mask = pc & 1 ? 0xFFFFFFFE : 0xFFFFFFFC
-            code.AND(new_pc, new_pc, mask);
-            code.STR(INDEX_UNSIGNED, new_pc, X28, MJitStateReg(A32::Reg::PC));
-        } else {
-            ARM64Reg new_pc = DecodeReg(ctx.reg_alloc.UseScratchGpr(arg));
-            ARM64Reg mask = DecodeReg(ctx.reg_alloc.ScratchGpr());
-
-            code.ANDI2R(mask, new_pc, 1);
-            code.STR(INDEX_UNSIGNED, mask, X28, offsetof(A32JitState, CPSR_et));
-            code.LSL(mask, mask, 1);
-            code.SUB(mask, mask, 4); // mask = pc & 1 ? 0xFFFFFFFE : 0xFFFFFFFC
-            code.AND(new_pc, new_pc, mask);
-            code.STR(INDEX_UNSIGNED, new_pc, X28, MJitStateReg(A32::Reg::PC));
-        }
+        code.ANDI2R(mask, new_pc, 1);
+        code.MOVI2R(new_upper, upper_without_t);
+        code.ADD(new_upper, new_upper, mask);
+        code.STR(INDEX_UNSIGNED, new_upper, X28, offsetof(A32JitState, upper_location_descriptor));
+        code.LSL(mask, mask, 1);
+        code.SUBI2R(mask, mask, 4); // mask = pc & 1 ? 0xFFFFFFFE : 0xFFFFFFFC
+        code.AND(new_pc, new_pc, mask);
+        code.STR(INDEX_UNSIGNED, new_pc, X28, MJitStateReg(A32::Reg::PC));
     }
 }
 
@@ -743,7 +729,7 @@ void A32EmitA64::EmitA32GetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     code.MOV(code.ABI_PARAM1, X28);
 
     code.MRS(fpsr, FIELD_FPSR);
-    code.STR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_FPSR));
+    code.STR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_fpsr));
     code.QuickCallFunction(&GetFpscrImpl);
 }
 
@@ -761,13 +747,13 @@ void A32EmitA64::EmitA32SetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
 
     code.QuickCallFunction(&SetFpscrImpl);
 
-    code.LDR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_FPSR));
+    code.LDR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_fpsr));
     code._MSR(FIELD_FPSR, fpsr);
 }
 
 void A32EmitA64::EmitA32GetFpscrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
     ARM64Reg result = DecodeReg(ctx.reg_alloc.ScratchGpr());
-    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, FPSCR_nzcv));
+    code.LDR(INDEX_UNSIGNED, result, X28, offsetof(A32JitState, fpsr_nzcv));
     ctx.reg_alloc.DefineValue(inst, result);
 }
 
@@ -777,7 +763,7 @@ void A32EmitA64::EmitA32SetFpscrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
 
     code.ANDI2R(value, value, 0xF0000000);
 
-    code.STR(INDEX_UNSIGNED, value, X28, offsetof(A32JitState, FPSCR_nzcv));
+    code.STR(INDEX_UNSIGNED, value, X28, offsetof(A32JitState, fpsr_nzcv));
 }
 
 void A32EmitA64::EmitA32ClearExclusive(A32EmitContext&, IR::Inst*) {
@@ -1261,7 +1247,7 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDesc
 
     code.MOVI2R(DecodeReg(code.ABI_PARAM2), A32::LocationDescriptor{terminal.next}.PC());
     code.MOVI2R(DecodeReg(code.ABI_PARAM3), terminal.num_instructions);
-    code.STR(INDEX_UNSIGNED,DecodeReg(code.ABI_PARAM2), X28, MJitStateReg(A32::Reg::PC));
+    code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_PARAM2), X28, MJitStateReg(A32::Reg::PC));
     code.SwitchFpscrOnExit();
     Devirtualize<&A32::UserCallbacks::InterpreterFallback>(config.callbacks).EmitCall(code);
     code.ReturnFromRunCode(true); // TODO: Check cycles
@@ -1271,19 +1257,25 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::ReturnToDispatch, IR::LocationDescri
     code.ReturnFromRunCode();
 }
 
-static u32 CalculateCpsr_et(const IR::LocationDescriptor& arg) {
-    const A32::LocationDescriptor desc{arg};
-    u32 et = 0;
-    et |= desc.EFlag() ? 2 : 0;
-    et |= desc.TFlag() ? 1 : 0;
-    return et;
+void A32EmitA64::EmitSetUpperLocationDescriptor(IR::LocationDescriptor new_location, IR::LocationDescriptor old_location) {
+    auto get_upper = [](const IR::LocationDescriptor &desc) -> u32 {
+        return static_cast<u32>(desc.Value() >> 32);
+    };
+
+    const u32 old_upper = get_upper(old_location);
+    const u32 new_upper = [&] {
+        const u32 mask = ~u32(config.always_little_endian ? 0x2 : 0);
+        return get_upper(new_location) & mask;
+    }();
+
+    if (old_upper != new_upper) {
+        code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), new_upper);
+        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, upper_location_descriptor));
+    }
 }
 
 void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDescriptor initial_location) {
-    if (CalculateCpsr_et(terminal.next) != CalculateCpsr_et(initial_location)) {
-        code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), CalculateCpsr_et(terminal.next));
-        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_et));
-    }
+    EmitSetUpperLocationDescriptor(terminal.next, initial_location);
 
     code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, X28, offsetof(A32JitState, cycles_remaining));
     code.CMP(code.ABI_SCRATCH1, ZR);
@@ -1311,10 +1303,7 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDesc
 }
 
 void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlockFast terminal, IR::LocationDescriptor initial_location) {
-    if (CalculateCpsr_et(terminal.next) != CalculateCpsr_et(initial_location)) {
-        code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), CalculateCpsr_et(terminal.next));
-        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, CPSR_et));
-    }
+    EmitSetUpperLocationDescriptor(terminal.next, initial_location);
 
     patch_information[terminal.next].jmp.emplace_back(code.GetCodePtr());
     if (auto next_bb = GetBasicBlock(terminal.next)) {
