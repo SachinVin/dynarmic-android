@@ -9,6 +9,9 @@
 #include <boost/icl/interval_set.hpp>
 #include <fmt/format.h>
 
+#include <dynarmic/A32/a32.h>
+#include <dynarmic/A32/context.h>
+
 #include "backend/A64/a32_emit_a64.h"
 #include "backend/A64/a32_jitstate.h"
 #include "backend/A64/block_of_code.h"
@@ -19,8 +22,6 @@
 #include "common/common_types.h"
 #include "common/llvm_disassemble.h"
 #include "common/scope_exit.h"
-#include "dynarmic/A32/a32.h"
-#include "dynarmic/A32/context.h"
 #include "frontend/A32/translate/translate.h"
 #include "frontend/ir/basic_block.h"
 #include "frontend/ir/location_descriptor.h"
@@ -40,8 +41,11 @@ static RunCodeCallbacks GenRunCodeCallbacks(A32::UserCallbacks* cb, CodePtr (*Lo
 
 struct Jit::Impl {
     Impl(Jit* jit, A32::UserConfig config)
-        : block_of_code(GenRunCodeCallbacks(config.callbacks, &GetCurrentBlock, this), JitStateInfo{jit_state}), emitter(block_of_code, config, jit),
-          config(config), jit_interface(jit) {}
+            : block_of_code(GenRunCodeCallbacks(config.callbacks, &GetCurrentBlock, this), JitStateInfo{jit_state})
+            , emitter(block_of_code, config, jit)
+            , config(std::move(config))
+            , jit_interface(jit)
+    {}
 
     A32JitState jit_state;
     BlockOfCode block_of_code;
@@ -118,7 +122,7 @@ private:
 
         u32 pc = jit_state.Reg[15];
         A32::PSR cpsr{jit_state.Cpsr()};
-        A32::FPSCR fpscr{jit_state.FPSCR_mode};
+        A32::FPSCR fpscr{jit_state.upper_location_descriptor};
         A32::LocationDescriptor descriptor{pc, cpsr, fpscr};
 
         return this_.GetBasicBlock(descriptor).entrypoint;
@@ -135,9 +139,7 @@ private:
             PerformCacheInvalidation();
         }
 
-        IR::Block ir_block =
-            A32::Translate(A32::LocationDescriptor{descriptor}, [this](u32 vaddr) { return config.callbacks->MemoryReadCode(vaddr); },
-                           {config.define_unpredictable_behaviour, config.hook_hint_instructions});
+        IR::Block ir_block = A32::Translate(A32::LocationDescriptor{descriptor}, [this](u32 vaddr) { return config.callbacks->MemoryReadCode(vaddr); }, {config.define_unpredictable_behaviour, config.hook_hint_instructions});
         Optimization::A32GetSetElimination(ir_block);
         Optimization::DeadCodeElimination(ir_block);
         Optimization::A32ConstantMemoryReads(ir_block, config.callbacks);
@@ -149,16 +151,14 @@ private:
     }
 };
 
-Jit::Jit(UserConfig config) : impl(std::make_unique<Impl>(this, config)) {}
+Jit::Jit(UserConfig config) : impl(std::make_unique<Impl>(this, std::move(config))) {}
 
-Jit::~Jit() {}
+Jit::~Jit() = default;
 
 void Jit::Run() {
     ASSERT(!is_executing);
     is_executing = true;
-    SCOPE_EXIT {
-        this->is_executing = false;
-    };
+    SCOPE_EXIT { this->is_executing = false; };
 
     impl->jit_state.halt_requested = false;
 
@@ -228,9 +228,7 @@ struct Context::Impl {
     size_t invalid_cache_generation;
 };
 
-Context::Context() : impl(std::make_unique<Context::Impl>()) {
-    impl->jit_state.ResetRSB();
-}
+Context::Context() : impl(std::make_unique<Context::Impl>()) { impl->jit_state.ResetRSB(); }
 Context::~Context() = default;
 Context::Context(const Context& ctx) : impl(std::make_unique<Context::Impl>(*ctx.impl)) {}
 Context::Context(Context&& ctx) noexcept : impl(std::move(ctx.impl)) {}
@@ -272,37 +270,14 @@ void Context::SetFpscr(std::uint32_t value) {
     return impl->jit_state.SetFpscr(value);
 }
 
-void TransferJitState(A32JitState& dest, const A32JitState& src, bool reset_rsb) {
-    dest.CPSR_ge = src.CPSR_ge;
-    dest.CPSR_et = src.CPSR_et;
-    dest.CPSR_q = src.CPSR_q;
-    dest.CPSR_nzcv = src.CPSR_nzcv;
-    dest.CPSR_jaifm = src.CPSR_jaifm;
-    dest.Reg = src.Reg;
-    dest.ExtReg = src.ExtReg;
-    dest.guest_FPCR = src.guest_FPCR;
-    dest.guest_FPSR = src.guest_FPSR;
-    dest.FPSCR_IDC = src.FPSCR_IDC;
-    dest.FPSCR_UFC = src.FPSCR_UFC;
-    dest.FPSCR_mode = src.FPSCR_mode;
-    dest.FPSCR_nzcv = src.FPSCR_nzcv;
-    if (reset_rsb) {
-        dest.ResetRSB();
-    } else {
-        dest.rsb_ptr = src.rsb_ptr;
-        dest.rsb_location_descriptors = src.rsb_location_descriptors;
-        dest.rsb_codeptrs = src.rsb_codeptrs;
-    }
-}
-
 void Jit::SaveContext(Context& ctx) const {
-    TransferJitState(ctx.impl->jit_state, impl->jit_state, false);
+    ctx.impl->jit_state.TransferJitState(impl->jit_state, false);
     ctx.impl->invalid_cache_generation = impl->invalid_cache_generation;
 }
 
 void Jit::LoadContext(const Context& ctx) {
     bool reset_rsb = ctx.impl->invalid_cache_generation != impl->invalid_cache_generation;
-    TransferJitState(impl->jit_state, ctx.impl->jit_state, reset_rsb);
+    impl->jit_state.TransferJitState(ctx.impl->jit_state, reset_rsb);
 }
 
 std::string Jit::Disassemble(const IR::LocationDescriptor& descriptor) {

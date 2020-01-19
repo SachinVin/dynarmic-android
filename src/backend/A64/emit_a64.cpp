@@ -158,7 +158,7 @@ FixupBranch EmitA64::EmitCond(IR::Cond cond) {
     FixupBranch label;
 
     const Arm64Gen::ARM64Reg cpsr = code.ABI_SCRATCH1;
-    code.LDR(INDEX_UNSIGNED, DecodeReg(cpsr), X28, code.GetJitStateInfo().offsetof_CPSR_nzcv);
+    code.LDR(INDEX_UNSIGNED, DecodeReg(cpsr), X28, code.GetJitStateInfo().offsetof_cpsr_nzcv);
     code._MSR(FIELD_NZCV, cpsr);
 
     switch (cond) {
