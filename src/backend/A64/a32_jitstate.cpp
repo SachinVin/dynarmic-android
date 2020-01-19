@@ -19,19 +19,21 @@ namespace Dynarmic::BackendA64 {
  *
  * ARM CPSR flags
  * --------------
- * N    bit 31       Negative flag
- * Z    bit 30       Zero flag
- * C    bit 29       Carry flag
- * V    bit 28       oVerflow flag
- * Q    bit 27       Saturation flag
- * J    bit 24       Jazelle instruction set flag
- * GE   bits 16-19   Greater than or Equal flags
- * E    bit 9        Data Endianness flag
- * A    bit 8        Disable imprecise Aborts
- * I    bit 7        Disable IRQ interrupts
- * F    bit 6        Disable FIQ interrupts
- * T    bit 5        Thumb instruction set flag
- * M    bits 0-4     Processor Mode bits
+ * N        bit 31       Negative flag
+ * Z        bit 30       Zero flag
+ * C        bit 29       Carry flag
+ * V        bit 28       oVerflow flag
+ * Q        bit 27       Saturation flag
+ * IT[1:0]  bits 25-26   If-Then execution state (lower 2 bits)
+ * J        bit 24       Jazelle instruction set flag
+ * GE       bits 16-19   Greater than or Equal flags
+ * IT[7:2]  bits 10-15   If-Then execution state (upper 6 bits)
+ * E        bit 9        Data Endianness flag
+ * A        bit 8        Disable imprecise Aborts
+ * I        bit 7        Disable IRQ interrupts
+ * F        bit 6        Disable FIQ interrupts
+ * T        bit 5        Thumb instruction set flag
+ * M        bits 0-4     Processor Mode bits
  *
  * A64 flags
  * -------------------
@@ -42,48 +44,55 @@ namespace Dynarmic::BackendA64 {
  */
 
 u32 A32JitState::Cpsr() const {
-    ASSERT((CPSR_nzcv & ~0xF0000000) == 0);
-    ASSERT((CPSR_q & ~1) == 0);
-    ASSERT((CPSR_et & ~3) == 0);
-    ASSERT((CPSR_jaifm & ~0x010001DF) == 0);
+    DEBUG_ASSERT((cpsr_nzcv & ~0xF0000000) == 0);
+    DEBUG_ASSERT((cpsr_q & ~1) == 0);
+    DEBUG_ASSERT((cpsr_jaifm & ~0x010001DF) == 0);
 
     u32 cpsr = 0;
 
     // NZCV flags
-    cpsr |= CPSR_nzcv;
+    cpsr |= cpsr_nzcv;
     // Q flag
-    cpsr |= CPSR_q ? 1 << 27 : 0;
+    cpsr |= cpsr_q ? 1 << 27 : 0;
     // GE flags
-    cpsr |= Common::Bit<31>(CPSR_ge) ? 1 << 19 : 0;
-    cpsr |= Common::Bit<23>(CPSR_ge) ? 1 << 18 : 0;
-    cpsr |= Common::Bit<15>(CPSR_ge) ? 1 << 17 : 0;
-    cpsr |= Common::Bit<7>(CPSR_ge) ? 1 << 16 : 0;
+    cpsr |= Common::Bit<31>(cpsr_ge) ? 1 << 19 : 0;
+    cpsr |= Common::Bit<23>(cpsr_ge) ? 1 << 18 : 0;
+    cpsr |= Common::Bit<15>(cpsr_ge) ? 1 << 17 : 0;
+    cpsr |= Common::Bit<7>(cpsr_ge) ? 1 << 16 : 0;
     // E flag, T flag
-    cpsr |= Common::Bit<1>(CPSR_et) ? 1 << 9 : 0;
-    cpsr |= Common::Bit<0>(CPSR_et) ? 1 << 5 : 0;
+    cpsr |= Common::Bit<1>(upper_location_descriptor) ? 1 << 9 : 0;
+    cpsr |= Common::Bit<0>(upper_location_descriptor) ? 1 << 5 : 0;
+    // IT state
+    cpsr |= static_cast<u32>(upper_location_descriptor & 0b11111100'00000000);
+    cpsr |= static_cast<u32>(upper_location_descriptor & 0b00000011'00000000) << 17;
     // Other flags
-    cpsr |= CPSR_jaifm;
+    cpsr |= cpsr_jaifm;
 
     return cpsr;
 }
 
 void A32JitState::SetCpsr(u32 cpsr) {
     // NZCV flags
-    CPSR_nzcv = cpsr & 0xF0000000;
+    cpsr_nzcv = cpsr & 0xF0000000;
     // Q flag
-    CPSR_q = Common::Bit<27>(cpsr) ? 1 : 0;
+    cpsr_q = Common::Bit<27>(cpsr) ? 1 : 0;
     // GE flags
-    CPSR_ge = 0;
-    CPSR_ge |= Common::Bit<19>(cpsr) ? 0xFF000000 : 0;
-    CPSR_ge |= Common::Bit<18>(cpsr) ? 0x00FF0000 : 0;
-    CPSR_ge |= Common::Bit<17>(cpsr) ? 0x0000FF00 : 0;
-    CPSR_ge |= Common::Bit<16>(cpsr) ? 0x000000FF : 0;
+    cpsr_ge = 0;
+    cpsr_ge |= Common::Bit<19>(cpsr) ? 0xFF000000 : 0;
+    cpsr_ge |= Common::Bit<18>(cpsr) ? 0x00FF0000 : 0;
+    cpsr_ge |= Common::Bit<17>(cpsr) ? 0x0000FF00 : 0;
+    cpsr_ge |= Common::Bit<16>(cpsr) ? 0x000000FF : 0;
+
+    upper_location_descriptor &= 0xFFFF0000;
     // E flag, T flag
-    CPSR_et = 0;
-    CPSR_et |= Common::Bit<9>(cpsr) ? 2 : 0;
-    CPSR_et |= Common::Bit<5>(cpsr) ? 1 : 0;
+    upper_location_descriptor |= Common::Bit<9>(cpsr) ? 2 : 0;
+    upper_location_descriptor |= Common::Bit<5>(cpsr) ? 1 : 0;
+    // IT state
+    upper_location_descriptor |= (cpsr >>  0) & 0b11111100'00000000;
+    upper_location_descriptor |= (cpsr >> 17) & 0b00000011'00000000;
+
     // Other flags
-    CPSR_jaifm = cpsr & 0x07F0FDDF;
+    cpsr_jaifm = cpsr & 0x010001DF;
 }
 
 void A32JitState::ResetRSB() {
@@ -115,52 +124,49 @@ void A32JitState::ResetRSB() {
  *
  * VFP FPSCR mode bits
  * -------------------
- * DN   bit 25  Default NaN
- * FZ   bit 24  Flush to Zero
+ * AHP      bit 26      Alternate half-precision
+ * DN       bit 25      Default NaN
+ * FZ       bit 24      Flush to Zero
  * RMode    bits 22-23  Round to {0 = Nearest, 1 = Positive, 2 = Negative, 3 = Zero}
  * Stride   bits 20-21  Vector stride
- * Len  bits 16-18  Vector length
+ * Len      bits 16-18  Vector length
  */
 
-// NZCV; QC (ASMID only), AHP; DN, FZ, RMode, Stride; SBZP; Len; trap enables; cumulative bits
+// NZCV; QC (ASIMD only), AHP; DN, FZ, RMode, Stride; SBZP; Len; trap enables; cumulative bits
 constexpr u32 FPSCR_MODE_MASK = A32::LocationDescriptor::FPSCR_MODE_MASK;
 constexpr u32 FPSCR_NZCV_MASK = 0xF0000000;
 
 u32 A32JitState::Fpscr() const {
-    ASSERT((FPSCR_mode & ~FPSCR_MODE_MASK) == 0);
-    ASSERT((FPSCR_nzcv & ~FPSCR_NZCV_MASK) == 0);
-    ASSERT((FPSCR_IDC & ~(1 << 7)) == 0);
-    ASSERT((FPSCR_UFC & ~(1 << 3)) == 0);
+    DEBUG_ASSERT((fpsr_nzcv & ~FPSCR_NZCV_MASK) == 0);
 
-    u32 FPSCR = FPSCR_mode | FPSCR_nzcv;
-    FPSCR |= (guest_FPSR & 0x1F);
-    FPSCR |= FPSCR_IDC;
-    FPSCR |= FPSCR_UFC;
+    const u32 fpcr_mode = static_cast<u32>(upper_location_descriptor) & FPSCR_MODE_MASK;
+
+    u32 FPSCR = fpcr_mode | fpsr_nzcv;
+    FPSCR |= (guest_fpsr & 0x1F);
     FPSCR |= fpsr_exc;
 
     return FPSCR;
 }
 
 void A32JitState::SetFpscr(u32 FPSCR) {
-    old_FPSCR = FPSCR;
-    FPSCR_mode = FPSCR & FPSCR_MODE_MASK;
-    FPSCR_nzcv = FPSCR & FPSCR_NZCV_MASK;
-    guest_FPCR = 0;
-    guest_FPSR = 0;
+    // Ensure that only upper half of upper_location_descriptor is used for FPSCR bits.
+    static_assert((FPSCR_MODE_MASK & 0xFFFF0000) == FPSCR_MODE_MASK);
+
+    upper_location_descriptor &= 0x0000FFFF;
+    upper_location_descriptor |= FPSCR & FPSCR_MODE_MASK;
+
+    fpsr_nzcv = FPSCR & FPSCR_NZCV_MASK;
+    guest_fpcr = 0;
+    guest_fpsr = 0;
+
     // Cumulative flags IDC, IOC, IXC, UFC, OFC, DZC
-    FPSCR_IDC = 0;
-    FPSCR_UFC = 0;
     fpsr_exc = FPSCR & 0x9F;
 
     // Mode Bits
-    guest_FPCR |= FPSCR & 0x07C09F00;
+    guest_fpcr |= FPSCR & 0x07C09F00;
 
     // Exceptions
-    guest_FPSR |= FPSCR & 0x9F;
+    guest_fpsr |= FPSCR & 0x9F;
 }
 
-u64 A32JitState::GetUniqueHash() const {
-    return CPSR_et | FPSCR_mode | (static_cast<u64>(Reg[15]) << 32);
-}
-
-} // namespace Dynarmic::BackendX64
+} // namespace Dynarmic::BackendA64

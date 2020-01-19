@@ -27,12 +27,12 @@ struct A32JitState {
     std::array<u32, 16> Reg{}; // Current register file.
     // TODO: Mode-specific register sets unimplemented.
 
-    u32 CPSR_et = 0;
-    u32 CPSR_ge = 0;
-    u32 CPSR_q = 0;
-    u32 CPSR_nzcv = 0;
-    u32 CPSR_jaifm = 0;
+    u32 upper_location_descriptor = 0;
 
+    u32 cpsr_ge = 0;
+    u32 cpsr_q = 0;
+    u32 cpsr_nzcv = 0;
+    u32 cpsr_jaifm = 0;
     u32 Cpsr() const;
     void SetCpsr(u32 cpsr);
 
@@ -45,8 +45,8 @@ struct A32JitState {
     }
 
     // For internal use (See: BlockOfCode::RunCode)
-    u64 guest_FPCR = 0;
-    u64 guest_FPSR = 0;
+    u64 guest_fpcr = 0;
+    u64 guest_fpsr = 0;
     u64 save_host_FPCR = 0;
     s64 cycles_to_run = 0;
     s64 cycles_remaining = 0;
@@ -67,15 +67,39 @@ struct A32JitState {
 
     u32 fpsr_exc = 0;
     u32 fpsr_qc = 0; // Dummy value
-    u32 FPSCR_IDC = 0;
-    u32 FPSCR_UFC = 0;
-    u32 FPSCR_mode = 0;
-    u32 FPSCR_nzcv = 0;
-    u32 old_FPSCR = 0;
+    u32 fpsr_nzcv = 0;
     u32 Fpscr() const;
     void SetFpscr(u32 FPSCR);
 
-    u64 GetUniqueHash() const;
+    u64 GetUniqueHash() const noexcept {
+        return (static_cast<u64>(upper_location_descriptor) << 32) | (static_cast<u64>(Reg[15]));
+    }
+
+    void TransferJitState(const A32JitState& src, bool reset_rsb) {
+        Reg = src.Reg;
+        upper_location_descriptor = src.upper_location_descriptor;
+        cpsr_ge = src.cpsr_ge;
+        cpsr_q = src.cpsr_q;
+        cpsr_nzcv = src.cpsr_nzcv;
+        cpsr_jaifm = src.cpsr_jaifm;
+        ExtReg = src.ExtReg;
+        guest_fpcr = src.guest_fpcr;
+        guest_fpsr = src.guest_fpsr;
+        fpsr_exc = src.fpsr_exc;
+        fpsr_qc = src.fpsr_qc;
+        fpsr_nzcv = src.fpsr_nzcv;
+
+        exclusive_state = 0;
+        exclusive_address = 0;
+
+        if (reset_rsb) {
+            ResetRSB();
+        } else {
+            rsb_ptr = src.rsb_ptr;
+            rsb_location_descriptors = src.rsb_location_descriptors;
+            rsb_codeptrs = src.rsb_codeptrs;
+        }
+    }
 };
 
 #ifdef _MSC_VER
