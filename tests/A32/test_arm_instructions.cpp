@@ -240,7 +240,7 @@ TEST_CASE("arm: Test InvalidateCacheRange", "[arm][A32]") {
     REQUIRE(jit.Cpsr() == 0x000001d0);
 }
 
-TEST_CASE("arm: Cleared Q flag", "[arm][A32]") {
+TEST_CASE("arm: Cleared Q flag", "[arm][A32][JitA64]") {
     ArmTestEnv test_env;
     A32::Jit jit{GetUserConfig(&test_env)};
 
@@ -275,4 +275,39 @@ TEST_CASE("arm: Cleared Q flag", "[arm][A32]") {
     REQUIRE(jit.Regs()[2] == 0x00008000);
     REQUIRE(jit.Regs()[3] == 0x00010000);
     REQUIRE(jit.Cpsr() == 0x000001d0);
+}
+
+TEST_CASE("arm: Cleared Q flag 2", "[arm][A32][JitA64]") {
+    ArmTestEnv test_env;
+    A32::Jit jit{GetUserConfig(&test_env)};
+
+    // Because of how we calculate the ge-flag in (A64 backend)sadd8
+    // and similar instructions, the host's Q flag may set,
+    // tainting our results in subsequent instructions.
+
+    // sadd8 r1, r0, r0
+    // qadd r3, r2, r2
+    // b +#0 (infinite loop)
+    test_env.code_mem = {
+        0xe6101f90,
+        0xe1023052,
+        0xeafffffe, 
+    };
+
+    jit.Regs() = {
+                0x7F007F00, // R0
+                0x80008000, // R1
+                0x00008000, // R2
+                0x7f7f7f7f, // R3
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+    };
+
+    jit.SetCpsr(0x000001d0); // User-mode
+
+    test_env.ticks_left = 4;
+    jit.Run();
+
+    REQUIRE((jit.Cpsr() & (1 << 27)) == 0);
 }
