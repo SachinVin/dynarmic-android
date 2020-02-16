@@ -33,22 +33,25 @@ void ConstantPool::EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper) {
         code.BRK(0x42);
         return;
     }
-
-    code.LDR(Rt, offset);
+    DEBUG_ASSERT((offset & 3) == 0);
+    code.LDR(Rt, offset / 4);
 }
 
 void ConstantPool::PatchPool() {
     u8* pool_ptr = code.GetWritableCodePtr();
     for (PatchInfo patch : patch_info) {
-        std::memcpy(pool_ptr, &std::get<0>(patch.constant), sizeof(u64));
-        std::memcpy(pool_ptr + sizeof(u64), &std::get<1>(patch.constant), sizeof(u64));
-        constant_info.emplace(patch.constant, pool_ptr);
-
+        auto iter = constant_info.find(patch.constant);
+        if (iter == constant_info.end()) {
+            std::memcpy(pool_ptr, &std::get<0>(patch.constant), sizeof(u64));
+            std::memcpy(pool_ptr + sizeof(u64), &std::get<1>(patch.constant), sizeof(u64));
+            iter = constant_info.emplace(patch.constant, pool_ptr).first;
+            pool_ptr += align_size;
+        }
         code.SetCodePtr(patch.ptr);
-        size_t offset = reinterpret_cast<size_t>(pool_ptr) - reinterpret_cast<size_t>(code.GetCodePtr());
-        code.LDR(patch.Rt, offset);
 
-        pool_ptr += align_size;
+        const s32 offset = reinterpret_cast<size_t>(iter->second) - reinterpret_cast<size_t>(code.GetCodePtr());
+        DEBUG_ASSERT((offset & 3) == 0);
+        code.LDR(patch.Rt, offset / 4);
     }
     patch_info.clear();
     code.SetCodePtr(pool_ptr);
