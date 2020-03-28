@@ -116,11 +116,11 @@ A32EmitA64::BlockDescriptor A32EmitA64::Emit(IR::Block& block) {
 
 #define OPCODE(name, type, ...)                                                  \
     case IR::Opcode::name:                                                       \
-         A32EmitA64::Emit##name(ctx, inst); \
+         A32EmitA64::Emit##name(ctx, inst);                                      \
          break;
 #define A32OPC(name, type, ...)                                                  \
     case IR::Opcode::A32##name:                                                  \
-         A32EmitA64::EmitA32##name(ctx, inst);  \
+         A32EmitA64::EmitA32##name(ctx, inst);                                   \
          break;
 #define A64OPC(...)
 #include "backend/A64/opcodes.inc"
@@ -178,6 +178,7 @@ void A32EmitA64::GenMemoryAccessors() {
     read_memory_8 = code.GetCodePtr();
     // Push lr and fp onto the stack
     code.ABI_PushRegisters(0x60000000);
+    code.ADD(X29, SP, 0);
     ABI_PushCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
     Devirtualize<&A32::UserCallbacks::MemoryRead8>(config.callbacks).EmitCall(code);
     ABI_PopCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
@@ -189,6 +190,7 @@ void A32EmitA64::GenMemoryAccessors() {
     read_memory_16 = code.GetCodePtr();
     // Push lr and fp onto the stack
     code.ABI_PushRegisters(0x60000000);
+    code.ADD(X29, SP, 0);
     ABI_PushCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
     Devirtualize<&A32::UserCallbacks::MemoryRead16>(config.callbacks).EmitCall(code);
     ABI_PopCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
@@ -212,6 +214,7 @@ void A32EmitA64::GenMemoryAccessors() {
     read_memory_64 = code.GetCodePtr();
     // Push lr and fp onto the stack
     code.ABI_PushRegisters(0x60000000);
+    code.ADD(X29, SP, 0);
     ABI_PushCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
     Devirtualize<&A32::UserCallbacks::MemoryRead64>(config.callbacks).EmitCall(code);
     ABI_PopCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
@@ -223,6 +226,7 @@ void A32EmitA64::GenMemoryAccessors() {
     write_memory_8 = code.GetCodePtr();
     // Push lr and fp onto the stack
     code.ABI_PushRegisters(0x60000000);
+    code.ADD(X29, SP, 0);
     ABI_PushCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
     Devirtualize<&A32::UserCallbacks::MemoryWrite8>(config.callbacks).EmitCall(code);
     ABI_PopCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
@@ -234,6 +238,7 @@ void A32EmitA64::GenMemoryAccessors() {
     write_memory_16 = code.GetCodePtr();
     // Push lr and fp onto the stack
     code.ABI_PushRegisters(0x60000000);
+    code.ADD(X29, SP, 0);
     ABI_PushCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
     Devirtualize<&A32::UserCallbacks::MemoryWrite16>(config.callbacks).EmitCall(code);
     ABI_PopCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
@@ -257,6 +262,7 @@ void A32EmitA64::GenMemoryAccessors() {
     write_memory_64 = code.GetCodePtr();
     // Push lr and fp onto the stack
     code.ABI_PushRegisters(0x60000000);
+    code.ADD(X29, SP, 0);
     ABI_PushCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
     Devirtualize<&A32::UserCallbacks::MemoryWrite64>(config.callbacks).EmitCall(code);
     ABI_PopCallerSaveRegistersAndAdjustStackExcept(code, ABI_RETURN);
@@ -286,15 +292,14 @@ void A32EmitA64::GenTerminalHandlers() {
     code.SUBI2R(code.ABI_SCRATCH1, DecodeReg(code.ABI_SCRATCH1), 1);
     code.ANDI2R(code.ABI_SCRATCH1, DecodeReg(code.ABI_SCRATCH1), u32(A32JitState::RSBPtrMask));
     code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, rsb_ptr));
-    code.ADD(code.ABI_SCRATCH1, X28, code.ABI_SCRATCH1, ArithOption{code.ABI_SCRATCH1, ST_LSL, 3});
-   
+
     // cmp(location_descriptor_reg, qword[r15 + offsetof(A32JitState, rsb_location_descriptors) + rsb_ptr * sizeof(u64)]);
-    code.LDR(INDEX_UNSIGNED, X21, code.ABI_SCRATCH1, offsetof(A32JitState, rsb_location_descriptors));
-    code.CMP(location_descriptor_reg, X21);
+    code.ADD(code.ABI_SCRATCH1, X28, code.ABI_SCRATCH1, ArithOption{code.ABI_SCRATCH1, ST_LSL, 3});
+    code.LDR(INDEX_UNSIGNED, X8, code.ABI_SCRATCH1, offsetof(A32JitState, rsb_location_descriptors));
+    code.CMP(location_descriptor_reg, X8);
     if (config.enable_fast_dispatch) {
         rsb_cache_miss = code.B(CC_NEQ);
-    }
-    else {
+    } else {
         code.B(CC_NEQ, code.GetReturnFromRunCodeAddress());
     }
     code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, code.ABI_SCRATCH1, offsetof(A32JitState, rsb_codeptrs));
@@ -302,15 +307,14 @@ void A32EmitA64::GenTerminalHandlers() {
     PerfMapRegister(terminal_handler_pop_rsb_hint, code.GetCodePtr(), "a32_terminal_handler_pop_rsb_hint");
 
     if (config.enable_fast_dispatch) {
-        code.AlignCode16();
-        terminal_handler_fast_dispatch_hint = code.GetCodePtr();
+        terminal_handler_fast_dispatch_hint = code.AlignCode16();
         calculate_location_descriptor();
         code.SetJumpTarget(rsb_cache_miss);
         code.MOVI2R(code.ABI_SCRATCH1, reinterpret_cast<u64>(fast_dispatch_table.data()));
         code.CRC32CW(DecodeReg(fast_dispatch_entry_reg), DecodeReg(fast_dispatch_entry_reg), DecodeReg(code.ABI_SCRATCH1));
         code.ANDI2R(fast_dispatch_entry_reg, fast_dispatch_entry_reg, fast_dispatch_table_mask);
-        code.ADD(fast_dispatch_entry_reg, fast_dispatch_entry_reg, code.ABI_SCRATCH1);        
-        
+        code.ADD(fast_dispatch_entry_reg, fast_dispatch_entry_reg, code.ABI_SCRATCH1);
+
         code.LDR(INDEX_UNSIGNED, code.ABI_SCRATCH1, fast_dispatch_entry_reg, offsetof(FastDispatchEntry, location_descriptor));
         code.CMP(location_descriptor_reg, code.ABI_SCRATCH1);
         fast_dispatch_cache_miss = code.B(CC_NEQ);
@@ -640,13 +644,11 @@ void A32EmitA64::EmitA32SetGEFlagsCompressed(A32EmitContext& ctx, IR::Inst* inst
         ARM64Reg a = DecodeReg(ctx.reg_alloc.UseScratchGpr(args[0]));
         ARM64Reg scratch = DecodeReg(ctx.reg_alloc.ScratchGpr());
 
-        code.LSR(a, a, 16);
-        code.ANDI2R(a, a, 0xF);
+        code.UBFX(a, a, 16, 4);
         code.MOVI2R(scratch, 0x00204081);
         code.MUL(a, a, scratch);
-        code.ANDI2R(a, a, 0x01010101, scratch);
-        code.MOVI2R(scratch, 0xFF);
-        code.MUL(a, a, scratch);
+        code.ANDI2R(a, a, 0x01010101);
+        code.ORR(a, a, a, ArithOption{a, ST_LSL, 1});
         code.STR(INDEX_UNSIGNED, a, X28, offsetof(A32JitState, cpsr_ge));
     }
 }
