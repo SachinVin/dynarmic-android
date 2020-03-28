@@ -485,10 +485,7 @@ HostLoc RegAlloc::LoadImmediate(IR::Value imm, HostLoc host_loc) {
     if (HostLocIsGPR(host_loc)) {
         Arm64Gen::ARM64Reg reg = HostLocToReg64(host_loc);
         u64 imm_value = ImmediateToU64(imm);
-        if (imm_value == 0)
-            code.MOV(reg, Arm64Gen::ZR);
-        else
-            code.MOVI2R(reg, imm_value);
+        code.MOVI2R(reg, imm_value);
         return host_loc;
     }
 
@@ -650,4 +647,4 @@ void RegAlloc::EmitExchange(HostLoc a, HostLoc b) {
     }
 }
 
-} // namespace Dynarmic::BackendX64
+} // namespace Dynarmic::BackendA64
