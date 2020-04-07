@@ -60,13 +60,18 @@ struct Jit::Impl {
     bool invalidate_entire_cache = false;
 
     void Execute() {
-        const u32 new_rsb_ptr = (jit_state.rsb_ptr - 1) & A32JitState::RSBPtrMask;
-        if (jit_state.GetUniqueHash() == jit_state.rsb_location_descriptors[new_rsb_ptr]) {
-            jit_state.rsb_ptr = new_rsb_ptr;
-            block_of_code.RunCodeFrom(&jit_state, reinterpret_cast<CodePtr>(jit_state.rsb_codeptrs[new_rsb_ptr]));
-        } else {
-            block_of_code.RunCode(&jit_state);
-        }
+        const CodePtr current_codeptr = [this]{
+            // RSB optimization
+            const u32 new_rsb_ptr = (jit_state.rsb_ptr - 1) & A32JitState::RSBPtrMask;
+            if (jit_state.GetUniqueHash() == jit_state.rsb_location_descriptors[new_rsb_ptr]) {
+                jit_state.rsb_ptr = new_rsb_ptr;
+                return reinterpret_cast<CodePtr>(jit_state.rsb_codeptrs[new_rsb_ptr]);
+            }
+
+            return GetCurrentBlock();
+        }();
+
+        block_of_code.RunCode(&jit_state, current_codeptr);
     }
 
     std::string Disassemble(const IR::LocationDescriptor& descriptor) {
@@ -255,7 +260,6 @@ const std::array<std::uint32_t, 64>& Context::ExtRegs() const {
     return impl->jit_state.ExtReg;
 }
 
-/// View and modify CPSR.
 std::uint32_t Context::Cpsr() const {
     return impl->jit_state.Cpsr();
 }
@@ -263,7 +267,6 @@ void Context::SetCpsr(std::uint32_t value) {
     impl->jit_state.SetCpsr(value);
 }
 
-/// View and modify FPSCR.
 std::uint32_t Context::Fpscr() const {
     return impl->jit_state.Fpscr();
 }
