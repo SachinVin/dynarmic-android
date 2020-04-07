@@ -127,6 +127,8 @@ void BlockOfCode::RunCode(void* jit_state, CodePtr code_ptr) const {
     run_code(jit_state, code_ptr);
 }
 
+void BlockOfCode::StepCode(void* jit_state, CodePtr code_ptr) const {
+    step_code(jit_state, code_ptr);
 }
 
 void BlockOfCode::ReturnFromRunCode(bool fpscr_already_exited) {
@@ -165,6 +167,19 @@ void BlockOfCode::GenRunCode() {
 
     SwitchFpscrOnEntry();
     BR(Arm64Gen::X25);
+
+    AlignCode16();
+    step_code = (RunCodeFuncType) GetWritableCodePtr();
+
+    ABI_PushCalleeSaveRegistersAndAdjustStack(*this);
+
+    MOV(Arm64Gen::X28, ABI_PARAM1);
+    
+    MOVI2R(Arm64Gen::X26, 1);
+    STR(Arm64Gen::INDEX_UNSIGNED, Arm64Gen::X26, Arm64Gen::X28, jsi.offsetof_cycles_to_run);    
+
+    SwitchFpscrOnEntry();
+    BR(ABI_PARAM2);
 
     enter_fpscr_then_loop = GetCodePtr();
     SwitchFpscrOnEntry();

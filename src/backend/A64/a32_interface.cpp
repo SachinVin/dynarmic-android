@@ -42,7 +42,7 @@ static RunCodeCallbacks GenRunCodeCallbacks(const A32::UserConfig& config, CodeP
 
 struct Jit::Impl {
     Impl(Jit* jit, A32::UserConfig config)
-            : block_of_code(GenRunCodeCallbacks(config, &GetCurrentBlock, this), JitStateInfo{jit_state})
+            : block_of_code(GenRunCodeCallbacks(config, &GetCurrentBlockThunk, this), JitStateInfo{jit_state})
             , emitter(block_of_code, config, jit)
             , config(std::move(config))
             , jit_interface(jit)
@@ -72,6 +72,10 @@ struct Jit::Impl {
         }();
 
         block_of_code.RunCode(&jit_state, current_codeptr);
+    }
+
+    void Step() {
+        block_of_code.StepCode(&jit_state, GetCurrentSingleStep());
     }
 
     std::string Disassemble(const IR::LocationDescriptor& descriptor) {
@@ -122,16 +126,21 @@ struct Jit::Impl {
 private:
     Jit* jit_interface;
 
-    static CodePtr GetCurrentBlock(void* this_voidptr) {
+    static CodePtr GetCurrentBlockThunk(void* this_voidptr) {
         Jit::Impl& this_ = *static_cast<Jit::Impl*>(this_voidptr);
-        A32JitState& jit_state = this_.jit_state;
+        return this_.GetCurrentBlock();
+    }
 
-        u32 pc = jit_state.Reg[15];
-        A32::PSR cpsr{jit_state.Cpsr()};
-        A32::FPSCR fpscr{jit_state.upper_location_descriptor};
-        A32::LocationDescriptor descriptor{pc, cpsr, fpscr};
+    IR::LocationDescriptor GetCurrentLocation() const {
+        return IR::LocationDescriptor{jit_state.GetUniqueHash()};
+    }
 
-        return this_.GetBasicBlock(descriptor).entrypoint;
+    CodePtr GetCurrentBlock() {
+        return GetBasicBlock(GetCurrentLocation()).entrypoint;
+    }
+
+    CodePtr GetCurrentSingleStep() {
+        return GetBasicBlock(A32::LocationDescriptor{GetCurrentLocation()}.SetSingleStepping(true)).entrypoint;
     }
 
     A32EmitA64::BlockDescriptor GetBasicBlock(IR::LocationDescriptor descriptor) {
@@ -169,6 +178,18 @@ void Jit::Run() {
     impl->jit_state.halt_requested = false;
 
     impl->Execute();
+
+    impl->PerformCacheInvalidation();
+}
+
+void Jit::Step() {
+    ASSERT(!is_executing);
+    is_executing = true;
+    SCOPE_EXIT { this->is_executing = false; };
+
+    impl->jit_state.halt_requested = true;
+
+    impl->Step();
 
     impl->PerformCacheInvalidation();
 }
