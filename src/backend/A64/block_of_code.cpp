@@ -123,12 +123,10 @@ size_t BlockOfCode::SpaceRemaining() const {
     return std::min(TOTAL_CODE_SIZE - far_code_offset, FAR_CODE_OFFSET - near_code_offset);
 }
 
-void BlockOfCode::RunCode(void* jit_state) const {
-    run_code(jit_state);
+void BlockOfCode::RunCode(void* jit_state, CodePtr code_ptr) const {
+    run_code(jit_state, code_ptr);
 }
 
-void BlockOfCode::RunCodeFrom(void* jit_state, CodePtr code_ptr) const {
-    run_code_from(jit_state, code_ptr);
 }
 
 void BlockOfCode::ReturnFromRunCode(bool fpscr_already_exited) {
@@ -149,23 +147,6 @@ void BlockOfCode::GenRunCode() {
     const u8* loop, *enter_fpscr_then_loop;
 
     AlignCode16();
-    run_code_from = (RunCodeFromFuncType) GetWritableCodePtr();
-
-    ABI_PushCalleeSaveRegistersAndAdjustStack(*this);
-
-    MOV(Arm64Gen::X28, ABI_PARAM1);
-    MOVI2R(Arm64Gen::X27, cb.value_in_X27);
-    MOV(Arm64Gen::X25, ABI_PARAM2); // save temporarily in non-volatile register
-
-    cb.GetTicksRemaining->EmitCall(*this);
-
-    STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
-    MOV(Arm64Gen::X26, ABI_RETURN);
-
-    SwitchFpscrOnEntry();
-    BR(Arm64Gen::X25);
-
-    AlignCode16();
     run_code = (RunCodeFuncType) GetWritableCodePtr();
 
     // This serves two purposes:
@@ -176,15 +157,18 @@ void BlockOfCode::GenRunCode() {
 
     MOV(Arm64Gen::X28, ABI_PARAM1);
     MOVI2R(Arm64Gen::X27, cb.value_in_X27);
+    MOV(Arm64Gen::X25, ABI_PARAM2); // save temporarily in non-volatile register
 
     cb.GetTicksRemaining->EmitCall(*this);
     STR(Arm64Gen::INDEX_UNSIGNED, ABI_RETURN, Arm64Gen::X28, jsi.offsetof_cycles_to_run);
     MOV(Arm64Gen::X26, ABI_RETURN);
 
+    SwitchFpscrOnEntry();
+    BR(Arm64Gen::X25);
+
     enter_fpscr_then_loop = GetCodePtr();
     SwitchFpscrOnEntry();
     loop = GetCodePtr();
-
     cb.LookupBlock->EmitCall(*this);
     BR(ABI_RETURN);    
 
@@ -220,7 +204,7 @@ void BlockOfCode::GenRunCode() {
     return_from_run_code[FPSCR_ALREADY_EXITED | FORCE_RETURN] = AlignCode16();
     emit_return_from_run_code(true, true);
 
-    PerfMapRegister(run_code_from, GetCodePtr(), "dynarmic_dispatcher");
+    PerfMapRegister(run_code, GetCodePtr(), "dynarmic_dispatcher");
 }
 
 void BlockOfCode::SwitchFpscrOnEntry() {
