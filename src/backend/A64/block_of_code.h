@@ -48,6 +48,8 @@ public:
 
     /// Runs emulated code from code_ptr.
     void RunCode(void* jit_state, CodePtr code_ptr) const;
+    /// Runs emulated code from code_ptr for a single cycle.
+    void StepCode(void* jit_state, CodePtr code_ptr) const;
     /// Code emitter: Returns to dispatcher
     void ReturnFromRunCode(bool fpscr_already_exited = false);
     /// Code emitter: Returns to dispatcher, forces return to host
@@ -133,6 +135,7 @@ private:
 
     using RunCodeFuncType = void(*)(void*, CodePtr);
     RunCodeFuncType run_code = nullptr;
+    RunCodeFuncType step_code = nullptr;
     static constexpr size_t FPSCR_ALREADY_EXITED = 1 << 0;
     static constexpr size_t FORCE_RETURN = 1 << 1;
     std::array<const void*, 4> return_from_run_code;
@@ -141,4 +144,4 @@ private:
     //Xbyak::util::Cpu cpu_info;
 };
 
-} // namespace Dynarmic::BackendX64
+} // namespace Dynarmic::BackendA64
