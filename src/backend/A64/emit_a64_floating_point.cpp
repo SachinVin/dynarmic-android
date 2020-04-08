@@ -19,20 +19,11 @@
 #include "common/fp/op.h"
 #include "common/fp/rounding_mode.h"
 #include "common/fp/util.h"
-#include "common/mp/cartesian_product.h"
-#include "common/mp/integer.h"
-#include "common/mp/list.h"
-#include "common/mp/lut.h"
-#include "common/mp/to_tuple.h"
-#include "common/mp/vlift.h"
-#include "common/mp/vllift.h"
 #include "frontend/ir/basic_block.h"
 #include "frontend/ir/microinstruction.h"
 #include "frontend/ir/opcodes.h"
 
 namespace Dynarmic::BackendA64 {
-
-namespace mp = Dynarmic::Common::mp;
 
 namespace {
 
