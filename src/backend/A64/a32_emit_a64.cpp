@@ -732,11 +732,14 @@ static u32 GetFpscrImpl(A32JitState* jit_state) {
 void A32EmitA64::EmitA32GetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     ctx.reg_alloc.HostCall(inst);
     // Use an unused HostCall register
-    ARM64Reg fpsr = X9;
+    const ARM64Reg fpsr = X9;
+    const ARM64Reg fpcr = X10;
     code.MOV(code.ABI_PARAM1, X28);
 
     code.MRS(fpsr, FIELD_FPSR);
+    code.MRS(fpcr, FIELD_FPCR);
     code.STR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_fpsr));
+    code.STR(INDEX_UNSIGNED, fpcr, X28, offsetof(A32JitState, guest_fpcr));
     code.QuickCallFunction(&GetFpscrImpl);
 }
 
@@ -748,14 +751,17 @@ void A32EmitA64::EmitA32SetFpscr(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     ctx.reg_alloc.HostCall(nullptr, args[0]);
     // Use an unused HostCall register
-    ARM64Reg fpsr = X9;
+    const ARM64Reg fpsr = X9;
+    const ARM64Reg fpcr = X10;
 
     code.MOV(code.ABI_PARAM2, X28);
 
     code.QuickCallFunction(&SetFpscrImpl);
 
     code.LDR(INDEX_UNSIGNED, fpsr, X28, offsetof(A32JitState, guest_fpsr));
+    code.LDR(INDEX_UNSIGNED, fpcr, X28, offsetof(A32JitState, guest_fpcr));
     code._MSR(FIELD_FPSR, fpsr);
+    code._MSR(FIELD_FPCR, fpcr);
 }
 
 void A32EmitA64::EmitA32GetFpscrNZCV(A32EmitContext& ctx, IR::Inst* inst) {
