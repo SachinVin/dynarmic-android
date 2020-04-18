@@ -111,7 +111,7 @@ protected:
         std::vector<CodePtr> mov_x0;
     };
     void Patch(const IR::LocationDescriptor& target_desc, CodePtr target_code_ptr);
-    void Unpatch(const IR::LocationDescriptor& target_desc);
+    virtual void Unpatch(const IR::LocationDescriptor& target_desc);
     virtual void EmitPatchJg(const IR::LocationDescriptor& target_desc, CodePtr target_code_ptr = nullptr) = 0;
     virtual void EmitPatchJmp(const IR::LocationDescriptor& target_desc, CodePtr target_code_ptr = nullptr) = 0;
     virtual void EmitPatchMovX0(CodePtr target_code_ptr = nullptr) = 0;
