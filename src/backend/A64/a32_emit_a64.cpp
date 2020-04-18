@@ -164,12 +164,11 @@ void A32EmitA64::ClearCache() {
 
 void A32EmitA64::InvalidateCacheRanges(const boost::icl::interval_set<u32>& ranges) {
     InvalidateBasicBlocks(block_ranges.InvalidateRanges(ranges));
-    ClearFastDispatchTable();
 }
 
 void A32EmitA64::ClearFastDispatchTable() {
     if (config.enable_fast_dispatch) {
-        fast_dispatch_table.fill({0xFFFFFFFFFFFFFFFFull, nullptr});
+        fast_dispatch_table.fill({});
     }
 }
 
@@ -327,6 +326,14 @@ void A32EmitA64::GenTerminalHandlers() {
         code.STR(INDEX_UNSIGNED, code.ABI_RETURN, fast_dispatch_entry_reg, offsetof(FastDispatchEntry, code_ptr));
         code.BR(code.ABI_RETURN);
         PerfMapRegister(terminal_handler_fast_dispatch_hint, code.GetCodePtr(), "a32_terminal_handler_fast_dispatch_hint");
+
+        code.AlignCode16();
+        fast_dispatch_table_lookup = reinterpret_cast<FastDispatchEntry& (*)(u64)>(code.GetWritableCodePtr());
+        code.MOVI2R(code.ABI_PARAM2, reinterpret_cast<u64>(fast_dispatch_table.data()));
+        code.CRC32CW(DecodeReg(code.ABI_PARAM1), DecodeReg(code.ABI_PARAM1), DecodeReg(code.ABI_PARAM2));
+        code.ANDI2R(DecodeReg(code.ABI_PARAM1), DecodeReg(code.ABI_PARAM1), fast_dispatch_table_mask);
+        code.ADD(code.ABI_RETURN, code.ABI_PARAM1, code.ABI_PARAM2);
+        code.RET();
     }
 }
 
@@ -1549,6 +1556,13 @@ void A32EmitA64::EmitPatchMovX0(CodePtr target_code_ptr) {
     const CodePtr patch_location = code.GetCodePtr();
     code.MOVP2R(X0, target_code_ptr);
     code.EnsurePatchLocationSize(patch_location, 16);
+}
+
+void A32EmitA64::Unpatch(const IR::LocationDescriptor& location) {
+    EmitA64::Unpatch(location);
+    if (config.enable_fast_dispatch) {
+        (*fast_dispatch_table_lookup)(location.Value()) = {};
+    }
 }
 
 } // namespace Dynarmic::BackendA64
