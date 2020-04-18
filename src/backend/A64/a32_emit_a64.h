@@ -61,8 +61,8 @@ protected:
     ExceptionHandler exception_handler;
 
     struct FastDispatchEntry {
-        u64 location_descriptor;
-        const void* code_ptr;
+        u64 location_descriptor = 0xFFFF'FFFF'FFFF'FFFFull;
+        const void* code_ptr = nullptr;
     };
     static_assert(sizeof(FastDispatchEntry) == 0x10);
     static constexpr u64 fast_dispatch_table_mask = 0xFFFF0;
@@ -92,6 +92,7 @@ protected:
 
     const void* terminal_handler_pop_rsb_hint;
     const void* terminal_handler_fast_dispatch_hint = nullptr;
+    FastDispatchEntry& (*fast_dispatch_table_lookup)(u64) = nullptr;
     void GenTerminalHandlers();
 
     // Microinstruction emitters
@@ -125,6 +126,7 @@ protected:
     void EmitTerminalImpl(IR::Term::CheckHalt terminal, IR::LocationDescriptor initial_location) override;
 
     // Patching
+    void Unpatch(const IR::LocationDescriptor& target_desc) override;
     void EmitPatchJg(const IR::LocationDescriptor& target_desc, CodePtr target_code_ptr = nullptr) override;
     void EmitPatchJmp(const IR::LocationDescriptor& target_desc, CodePtr target_code_ptr = nullptr) override;
     void EmitPatchMovX0(CodePtr target_code_ptr = nullptr) override;
