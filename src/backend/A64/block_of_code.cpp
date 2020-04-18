@@ -149,7 +149,7 @@ void BlockOfCode::GenRunCode() {
     const u8* loop, *enter_fpscr_then_loop;
 
     AlignCode16();
-    run_code = (RunCodeFuncType) GetWritableCodePtr();
+    run_code = reinterpret_cast<RunCodeFuncType>(GetWritableCodePtr());
 
     // This serves two purposes:
     // 1. It saves all the registers we as a callee need to save.
@@ -169,8 +169,7 @@ void BlockOfCode::GenRunCode() {
     BR(Arm64Gen::X25);
 
     AlignCode16();
-    step_code = (RunCodeFuncType) GetWritableCodePtr();
-
+    step_code = reinterpret_cast<RunCodeFuncType>(GetWritableCodePtr());
     ABI_PushCalleeSaveRegistersAndAdjustStack(*this);
 
     MOV(Arm64Gen::X28, ABI_PARAM1);
