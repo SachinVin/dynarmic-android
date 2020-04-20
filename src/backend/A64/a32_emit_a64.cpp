@@ -879,7 +879,6 @@ void A32EmitA64::ReadMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr c
                 ASSERT_MSG(false, "Invalid bit_size");
                 break;
         }
-        code.EnsurePatchLocationSize(patch_location, 5);
 
         fastmem_patch_info.emplace(
                 patch_location,
@@ -889,9 +888,7 @@ void A32EmitA64::ReadMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr c
                             code.SetCodePtr(patch_location);
                             FixupBranch thunk = code.B();
                             u8* end_ptr = code.GetWritableCodePtr();
-                            code.EnsurePatchLocationSize(patch_location, 5);
-                            code.FlushIcacheSection(reinterpret_cast<const u8*>(patch_location), code.GetCodePtr());
-
+                            code.FlushIcacheSection(reinterpret_cast<const u8*>(patch_location), end_ptr);
                             code.SetCodePtr(save_code_ptr);
                             code.SwitchToFarCode();
                             code.SetJumpTarget(thunk);
@@ -994,7 +991,6 @@ void A32EmitA64::WriteMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr 
                 ASSERT_MSG(false, "Invalid bit_size");
                 break;
         }
-        code.EnsurePatchLocationSize(patch_location, 5);
 
         fastmem_patch_info.emplace(
                 patch_location,
@@ -1004,9 +1000,7 @@ void A32EmitA64::WriteMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr 
                             code.SetCodePtr(patch_location);
                             FixupBranch thunk = code.B();
                             u8* end_ptr = code.GetWritableCodePtr();
-                            code.EnsurePatchLocationSize(patch_location, 5);
-                            code.FlushIcacheSection(reinterpret_cast<const u8*>(patch_location), code.GetCodePtr());
-
+                            code.FlushIcacheSection(reinterpret_cast<const u8*>(patch_location), end_ptr);
                             code.SetCodePtr(save_code_ptr);
                             code.SwitchToFarCode();
                             code.SetJumpTarget(thunk);
