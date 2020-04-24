@@ -22,7 +22,16 @@ const int kWRegSizeInBits = 32;
 const int kXRegSizeInBits = 64;
 
 // The below few functions are taken from V8.
-int CountLeadingZeros(uint64_t value, int width) {
+int CountLeadingZeros(u64 value, int width) {
+#ifdef _MSC_VER
+    if (width == 64) {
+        return _CountLeadingZeros64(value);
+    }
+#else
+    if (width == 64) {
+        return __builtin_clzll(value);
+    }
+#endif
     // TODO(jbramley): Optimize this for ARM64 hosts.
     int count = 0;
     uint64_t bit_test = 1ULL << (width - 1);
