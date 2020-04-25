@@ -87,11 +87,10 @@ u32 GenRandomInst(u32 pc, bool is_last_inst) {
 #define INST(fn, name, bitstring) {#fn, bitstring},
 #ifdef ARCHITECTURE_Aarch64
 #include "frontend/A32/decoder/arm_a64.inc"
-#include "frontend/A32/decoder/vfp2_a64.inc"
 #else
 #include "frontend/A32/decoder/arm.inc"
-#include "frontend/A32/decoder/vfp.inc"
 #endif
+#include "frontend/A32/decoder/vfp.inc"
 #undef INST
         };
 
