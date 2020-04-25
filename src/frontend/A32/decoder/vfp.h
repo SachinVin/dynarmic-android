@@ -31,11 +31,7 @@ std::optional<std::reference_wrapper<const VFPMatcher<V>>> DecodeVFP(u32 instruc
         Table list = {
 
 #define INST(fn, name, bitstring) Decoder::detail::detail<VFPMatcher<V>>::GetMatcher(&V::fn, name, bitstring),
-#ifdef ARCHITECTURE_Aarch64
-#include "vfp2_a64.inc"
-#else
 #include "vfp.inc"
-#endif
 #undef INST
 
         };
