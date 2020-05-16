@@ -52,7 +52,7 @@ static size_t MJitStateExtReg(A32::ExtReg reg) {
         size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::D0);
         return offsetof(A32JitState, ExtReg) + sizeof(u64) * index;
     }
-    ASSERT_MSG(false, "Should never happen.");
+    ASSERT_FALSE("Should never happen.");
 }
 
 A32EmitContext::A32EmitContext(RegAlloc& reg_alloc, IR::Block& block) : EmitContext(reg_alloc, block) {}
@@ -129,7 +129,7 @@ A32EmitA64::BlockDescriptor A32EmitA64::Emit(IR::Block& block) {
 #undef A64OPC
 
         default:
-            ASSERT_MSG(false, "Invalid opcode: {}", inst->GetOpcode());
+            ASSERT_FALSE("Invalid opcode: {}", inst->GetOpcode());
             break;
         }
 
@@ -850,7 +850,7 @@ void A32EmitA64::ReadMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr c
                 code.LDR(result, result, vaddr);
                 break;
             default:
-                ASSERT_MSG(false, "Invalid bit_size");
+                ASSERT_FALSE("Invalid bit_size");
                 break;
         }
         end = code.B();
@@ -876,7 +876,7 @@ void A32EmitA64::ReadMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr c
                 code.LDR(result, X27, vaddr);
                 break;
             default:
-                ASSERT_MSG(false, "Invalid bit_size");
+                ASSERT_FALSE("Invalid bit_size");
                 break;
         }
 
@@ -964,7 +964,7 @@ void A32EmitA64::WriteMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr 
                 code.STR(value, addr, vaddr);
                 break;
             default:
-                ASSERT_MSG(false, "Invalid bit_size");
+                ASSERT_FALSE("Invalid bit_size");
                 break;
         }
         end = code.B();
@@ -988,7 +988,7 @@ void A32EmitA64::WriteMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr 
                 code.STR(value, X27, vaddr);
                 break;
             default:
-                ASSERT_MSG(false, "Invalid bit_size");
+                ASSERT_FALSE("Invalid bit_size");
                 break;
         }
 
@@ -1116,7 +1116,7 @@ void A32EmitA64::EmitA32ExclusiveWriteMemory64(A32EmitContext& ctx, IR::Inst* in
 }
 
 static void EmitCoprocessorException() {
-    ASSERT_MSG(false, "Should raise coproc exception here");
+    ASSERT_FALSE("Should raise coproc exception here");
 }
 
 static void CallCoprocCallback(BlockOfCode& code, RegAlloc& reg_alloc, A32::Jit* jit_interface, A32::Coprocessor::Callback callback,
@@ -1194,7 +1194,7 @@ void A32EmitA64::EmitA32CoprocSendOneWord(A32EmitContext& ctx, IR::Inst* inst) {
         return;
     }
     default:
-        ASSERT_MSG(false, "Unreachable");
+        UNREACHABLE();
     }
 }
 
@@ -1236,7 +1236,7 @@ void A32EmitA64::EmitA32CoprocSendTwoWords(A32EmitContext& ctx, IR::Inst* inst) 
         return;
     }
     default:
-        ASSERT_MSG(false, "Unreachable");
+        UNREACHABLE();
     }
 }
 
@@ -1277,7 +1277,7 @@ void A32EmitA64::EmitA32CoprocGetOneWord(A32EmitContext& ctx, IR::Inst* inst) {
         return;
     }
     default:
-        ASSERT_MSG(false, "Unreachable");
+        UNREACHABLE();
     }
 }
 
@@ -1320,7 +1320,7 @@ void A32EmitA64::EmitA32CoprocGetTwoWords(A32EmitContext& ctx, IR::Inst* inst) {
         return;
     }
     default:
-        ASSERT_MSG(false, "Unreachable");
+        UNREACHABLE();
     }
 }
 
