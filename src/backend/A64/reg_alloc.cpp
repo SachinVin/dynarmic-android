@@ -29,7 +29,7 @@ static u64 ImmediateToU64(const IR::Value& imm) {
     case IR::Type::U64:
         return u64(imm.GetU64());
     default:
-        ASSERT_MSG(false, "This should never happen.");
+        ASSERT_FALSE("This should never happen.");
     }
 }
 
@@ -48,10 +48,10 @@ static size_t GetBitWidth(IR::Type type) {
     case IR::Type::Cond:
     case IR::Type::Void:
     case IR::Type::Table:
-        ASSERT_MSG(false, "Type {} cannot be represented at runtime", type);
+        ASSERT_FALSE("Type {} cannot be represented at runtime", type);
         return 0;
     case IR::Type::Opaque:
-        ASSERT_MSG(false, "Not a concrete type");
+        ASSERT_FALSE("Not a concrete type");
         return 0;
     case IR::Type::U1:
         return 8;
@@ -567,7 +567,7 @@ HostLoc RegAlloc::FindFreeSpill() const {
             return loc;
     }
 
-    ASSERT_MSG(false, "All spill locations are full");
+    ASSERT_FALSE("All spill locations are full");
 }
 
 HostLocInfo& RegAlloc::LocInfo(HostLoc loc) {
@@ -630,7 +630,7 @@ void RegAlloc::EmitMove(size_t bit_width, HostLoc to, HostLoc from) {
             code.STR(Arm64Gen::INDEX_UNSIGNED, DecodeReg(HostLocToReg64(from)), Arm64Gen::X28, spill_to_addr(to));
         }
     } else {
-        ASSERT_MSG(false, "Invalid RegAlloc::EmitMove");
+        ASSERT_FALSE("Invalid RegAlloc::EmitMove");
     }
 }
 
@@ -641,9 +641,9 @@ void RegAlloc::EmitExchange(HostLoc a, HostLoc b) {
         code.EOR(HostLocToReg64(b), HostLocToReg64(a), HostLocToReg64(b));
         code.EOR(HostLocToReg64(a), HostLocToReg64(a), HostLocToReg64(b));
     } else if (HostLocIsFPR(a) && HostLocIsFPR(b)) {
-        ASSERT_MSG(false, "Check your code: Exchanging XMM registers is unnecessary");
+        ASSERT_FALSE("Check your code: Exchanging XMM registers is unnecessary");
     } else {
-        ASSERT_MSG(false, "Invalid RegAlloc::EmitExchange");
+        ASSERT_FALSE("Invalid RegAlloc::EmitExchange");
     }
 }
 

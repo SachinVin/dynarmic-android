@@ -94,23 +94,23 @@ void EmitA64::EmitPushRSB(EmitContext& ctx, IR::Inst* inst) {
 }
 
 void EmitA64::EmitGetCarryFromOp(EmitContext&, IR::Inst*) {
-    ASSERT_MSG(false, "should never happen");
+    ASSERT_FALSE("should never happen");
 }
 
 void EmitA64::EmitGetOverflowFromOp(EmitContext&, IR::Inst*) {
-    ASSERT_MSG(false, "should never happen");
+    ASSERT_FALSE("should never happen");
 }
 
 void EmitA64::EmitGetGEFromOp(EmitContext&, IR::Inst*) {
-    ASSERT_MSG(false, "should never happen");
+    ASSERT_FALSE("should never happen");
 }
 
 void EmitA64::EmitGetUpperFromOp(EmitContext&, IR::Inst*) {
-    ASSERT_MSG(false, "should never happen");
+    ASSERT_FALSE("should never happen");
 }
 
 void EmitA64::EmitGetLowerFromOp(EmitContext&, IR::Inst*) {
-    ASSERT_MSG(false, "should never happen");
+    ASSERT_FALSE("should never happen");
 }
 
 void EmitA64::EmitGetNZCVFromOp(EmitContext& ctx, IR::Inst* inst) {
