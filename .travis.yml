@@ -32,14 +32,18 @@ matrix:
       script: ./.travis/build-x86_64-linux/build.sh
     - env: NAME="Linux aarch64 Build"
       os: linux
-      dist: trusty
-      sudo: required
-      services: docker
+      dist: bionic
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-      script: ./.travis/build-aarch64-linux/run.sh
+          packages:
+          - gcc-8-aarch64-linux-gnu
+          - g++-8-aarch64-linux-gnu
+          - ninja-build
+          - qemu-user
+      install: ./.travis/build-aarch64-linux/deps.sh
+      script: ./.travis/build-aarch64-linux/build.sh
     - env: NAME="macOS Build"
       os: osx
       sudo: false
