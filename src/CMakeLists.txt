@@ -338,11 +338,6 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/emitter/a64_emitter.h
          backend/A64/emitter/arm_common.h
          backend/A64/emitter/code_block.h
-         backend/A64/a32_emit_a64.cpp
-         backend/A64/a32_emit_a64.h		 
-         backend/A64/a32_interface.cpp
-         backend/A64/a32_jitstate.cpp
-         backend/A64/a32_jitstate.h
          # backend/A64/a64_emit_a64.cpp
          # backend/A64/a64_emit_a64.h
          # backend/A64/a64_exclusive_monitor.cpp
@@ -370,7 +365,8 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/emit_a64_saturation.cpp
          # backend/A64/emit_a64_sm4.cpp
          # backend/A64/emit_a64_vector.cpp
-         # backend/A64/emit_a64_vector_floating_point.cpp
+         # backend/A64/emit_a64_vector_floating_point.cpp         
+         backend/A64/exception_handler.h
          backend/A64/hostloc.cpp
          backend/A64/hostloc.h
          backend/A64/jitstate_info.h
@@ -379,11 +375,23 @@ elseif(ARCHITECTURE_Aarch64)
          backend/A64/perf_map.h
          backend/A64/reg_alloc.cpp
          backend/A64/reg_alloc.h
-
-         backend/A64/exception_handler.h
-         #backend/A64/exception_handler_generic.cpp
-         backend/A64/exception_handler_posix.cpp
     )
+    
+    if ("A32" IN_LIST DYNARMIC_FRONTENDS)
+        target_sources(dynarmic PRIVATE
+            backend/A64/a32_emit_a64.cpp
+            backend/A64/a32_emit_a64.h
+            backend/A64/a32_interface.cpp
+            backend/A64/a32_jitstate.cpp
+            backend/A64/a32_jitstate.h
+        )
+    endif()
+    
+    if (ANDROID)
+        target_sources(dynarmic PRIVATE backend/A64/exception_handler_posix.cpp)
+    else()
+        target_sources(dynarmic PRIVATE backend/A64/exception_handler_generic.cpp)
+    endif()
 else()
     message(FATAL_ERROR "Unsupported architecture")
 endif()
@@ -403,6 +411,7 @@ target_link_libraries(dynarmic
         tsl::robin_map
         $<$<BOOL:DYNARMIC_USE_LLVM>:${llvm_libs}>
 )
+
 if(ANDROID)
     target_link_libraries(dynarmic PRIVATE log)
 endif()
@@ -417,5 +426,3 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 # Disable this as it relies on a non-standard feature
 target_compile_definitions(dynarmic PRIVATE FMT_USE_USER_DEFINED_LITERALS=0)
-
-#export(TARGETS dynarmic boost fmt xbyak FILE "dynarmic-config.cmake")
