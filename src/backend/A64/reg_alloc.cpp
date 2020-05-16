@@ -585,7 +585,7 @@ void RegAlloc::EmitMove(size_t bit_width, HostLoc to, HostLoc from) {
         // bit_width == 128
         //mov(HostLocToFpr(to), HostLocToFpr(from));
 
-        UNIMPLEMENTED();
+        ASSERT_FALSE("Unimplemented");
     } else if (HostLocIsGPR(to) && HostLocIsGPR(from)) {
         ASSERT(bit_width != 128);
         if (bit_width == 64) {
