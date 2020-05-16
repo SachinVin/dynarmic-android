@@ -293,7 +293,7 @@ u8* BlockOfCode::GetRegion() const {
 
 std::size_t BlockOfCode::GetRegionSize() const {
     return total_region_size;
-};
+}
 
 void* BlockOfCode::AllocateFromCodeSpace(size_t alloc_size) {    
     ASSERT_MSG(GetSpaceLeft() >= alloc_size, "ERR_CODE_IS_TOO_BIG");
