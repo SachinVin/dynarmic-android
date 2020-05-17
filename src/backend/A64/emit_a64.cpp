@@ -210,20 +210,6 @@ FixupBranch EmitA64::EmitCond(IR::Cond cond) {
     return label;
 }
 
-void EmitA64::EmitCondPrelude(const IR::Block& block) {
-    if (block.GetCondition() == IR::Cond::AL) {
-        ASSERT(!block.HasConditionFailedLocation());
-        return;
-    }
-
-    ASSERT(block.HasConditionFailedLocation());
-
-    FixupBranch pass = EmitCond(block.GetCondition());
-    EmitAddCycles(block.ConditionFailedCycleCount());
-    EmitTerminal(IR::Term::LinkBlock{block.ConditionFailedLocation()}, block.Location());
-    code.SetJumpTarget(pass);
-}
-
 EmitA64::BlockDescriptor EmitA64::RegisterBlock(const IR::LocationDescriptor& descriptor, CodePtr entrypoint, size_t size) {
     PerfMapRegister(entrypoint, code.GetCodePtr(), LocationDescriptorToFriendlyName(descriptor));
     Patch(descriptor, entrypoint);
@@ -233,11 +219,11 @@ EmitA64::BlockDescriptor EmitA64::RegisterBlock(const IR::LocationDescriptor& de
     return block_desc;
 }
 
-void EmitA64::EmitTerminal(IR::Terminal terminal, IR::LocationDescriptor initial_location) {
-    Common::VisitVariant<void>(terminal, [this, &initial_location](auto x) {
+void EmitA64::EmitTerminal(IR::Terminal terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
+    Common::VisitVariant<void>(terminal, [this, initial_location, is_single_step](auto x) {
         using T = std::decay_t<decltype(x)>;
         if constexpr (!std::is_same_v<T, IR::Term::Invalid>) {
-            this->EmitTerminalImpl(x, initial_location);
+            this->EmitTerminalImpl(x, initial_location, is_single_step);
         } else {
             ASSERT_MSG(false, "Invalid terminal");
         }
