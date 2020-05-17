@@ -61,6 +61,10 @@ A32::LocationDescriptor A32EmitContext::Location() const {
     return A32::LocationDescriptor{block.Location()};
 }
 
+bool A32EmitContext::IsSingleStep() const {
+    return A32::LocationDescriptor{block.Location()}.SingleStepping();
+}
+
 FP::RoundingMode A32EmitContext::FPSCR_RMode() const {
     return Location().FPSCR().RMode();
 }
@@ -99,14 +103,13 @@ A32EmitA64::BlockDescriptor A32EmitA64::Emit(IR::Block& block) {
         code.DisableWriting();
     };
 
-    code.AlignCode16();
-    const u8* entrypoint = code.GetCodePtr();
+    RegAlloc reg_alloc{code, A32JitState::SpillCount, SpillToOpArg<A32JitState>};
+    A32EmitContext ctx{reg_alloc, block};    
+
+    const u8* entrypoint = code.AlignCode16();
 
     // Start emitting.
-    EmitCondPrelude(block);
-
-    RegAlloc reg_alloc{code, A32JitState::SpillCount, SpillToOpArg<A32JitState>};
-    A32EmitContext ctx{reg_alloc, block};
+    EmitCondPrelude(ctx);
 
     for (auto iter = block.begin(); iter != block.end(); ++iter) {
         IR::Inst* inst = &*iter;
@@ -139,7 +142,7 @@ A32EmitA64::BlockDescriptor A32EmitA64::Emit(IR::Block& block) {
     reg_alloc.AssertNoMoreUses();
 
     EmitAddCycles(block.CycleCount());
-    EmitA64::EmitTerminal(block.GetTerminal(), block.Location());
+    EmitA64::EmitTerminal(block.GetTerminal(), ctx.Location().SetSingleStepping(false), ctx.IsSingleStep());
     code.BRK(0);
     code.PatchConstPool();
     code.FlushIcacheSection(entrypoint, code.GetCodePtr());
@@ -164,6 +167,20 @@ void A32EmitA64::ClearCache() {
 
 void A32EmitA64::InvalidateCacheRanges(const boost::icl::interval_set<u32>& ranges) {
     InvalidateBasicBlocks(block_ranges.InvalidateRanges(ranges));
+}
+
+void A32EmitA64::EmitCondPrelude(const A32EmitContext& ctx) {
+    if (ctx.block.GetCondition() == IR::Cond::AL) {
+        ASSERT(!ctx.block.HasConditionFailedLocation());
+        return;
+    }
+
+    ASSERT(ctx.block.HasConditionFailedLocation());
+
+    FixupBranch pass = EmitCond(ctx.block.GetCondition());
+    EmitAddCycles(ctx.block.ConditionFailedCycleCount());
+    EmitTerminal(IR::Term::LinkBlock{ctx.block.ConditionFailedLocation()}, ctx.block.Location(),  ctx.IsSingleStep());
+    code.SetJumpTarget(pass);
 }
 
 void A32EmitA64::ClearFastDispatchTable() {
@@ -664,7 +681,7 @@ void A32EmitA64::EmitA32BXWritePC(A32EmitContext& ctx, IR::Inst* inst) {
     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
     auto& arg = args[0];
 
-    const u32 upper_without_t = (ctx.Location().UniqueHash() >> 32) & 0xFFFFFFFE;
+    const u32 upper_without_t = (ctx.Location().SetSingleStepping(false).UniqueHash() >> 32) & 0xFFFFFFFE;
 
     // Pseudocode:
     // if (new_pc & 1) {
@@ -1397,7 +1414,7 @@ void A32EmitA64::FastmemCallback(CodePtr PC) {
     fastmem_patch_info.erase(iter);
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDescriptor initial_location) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDescriptor initial_location, bool) {
     ASSERT_MSG(A32::LocationDescriptor{terminal.next}.TFlag() == A32::LocationDescriptor{initial_location}.TFlag(), "Unimplemented");
     ASSERT_MSG(A32::LocationDescriptor{terminal.next}.EFlag() == A32::LocationDescriptor{initial_location}.EFlag(), "Unimplemented");
 
@@ -1409,13 +1426,13 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::Interpret terminal, IR::LocationDesc
     code.ReturnFromRunCode(true); // TODO: Check cycles
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::ReturnToDispatch, IR::LocationDescriptor) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::ReturnToDispatch, IR::LocationDescriptor, bool) {
     code.ReturnFromRunCode();
 }
 
 void A32EmitA64::EmitSetUpperLocationDescriptor(IR::LocationDescriptor new_location, IR::LocationDescriptor old_location) {
     auto get_upper = [](const IR::LocationDescriptor &desc) -> u32 {
-        return static_cast<u32>(desc.Value() >> 32);
+        return static_cast<u32>(A32::LocationDescriptor{desc}.SetSingleStepping(false).UniqueHash() >> 32);
     };
 
     const u32 old_upper = get_upper(old_location);
@@ -1430,8 +1447,15 @@ void A32EmitA64::EmitSetUpperLocationDescriptor(IR::LocationDescriptor new_locat
     }
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDescriptor initial_location) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     EmitSetUpperLocationDescriptor(terminal.next, initial_location);
+
+    if (!config.enable_optimizations || is_single_step) {
+        code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), A32::LocationDescriptor{terminal.next}.PC());
+        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, MJitStateReg(A32::Reg::PC));
+        code.ReturnFromRunCode();
+        return;
+    }
 
     code.CMP(X26, ZR);
 
@@ -1457,8 +1481,15 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDesc
     code.SwitchToNearCode();
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlockFast terminal, IR::LocationDescriptor initial_location) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlockFast terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     EmitSetUpperLocationDescriptor(terminal.next, initial_location);
+    
+    if (!config.enable_optimizations || is_single_step) {
+        code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), A32::LocationDescriptor{terminal.next}.PC());
+        code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, MJitStateReg(A32::Reg::PC));
+        code.ReturnFromRunCode();
+        return;
+    }
 
     patch_information[terminal.next].jmp.emplace_back(code.GetCodePtr());
     if (auto next_bb = GetBasicBlock(terminal.next)) {
@@ -1468,41 +1499,45 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlockFast terminal, IR::Location
     }
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::PopRSBHint, IR::LocationDescriptor) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::PopRSBHint, IR::LocationDescriptor, bool is_single_step) {
+    if (!config.enable_optimizations || is_single_step) {
+        code.ReturnFromRunCode();
+        return;
+    }
     code.B(terminal_handler_pop_rsb_hint);
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::FastDispatchHint, IR::LocationDescriptor) {
-    if (config.enable_fast_dispatch) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::FastDispatchHint, IR::LocationDescriptor, bool is_single_step) {
+    if (config.enable_fast_dispatch && !is_single_step) {
         code.B(terminal_handler_fast_dispatch_hint);
     } else {
         code.ReturnFromRunCode();
     }
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::If terminal, IR::LocationDescriptor initial_location) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::If terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     FixupBranch pass = EmitCond(terminal.if_);
-    EmitTerminal(terminal.else_, initial_location);
+    EmitTerminal(terminal.else_, initial_location, is_single_step);
     code.SetJumpTarget(pass);
-    EmitTerminal(terminal.then_, initial_location);
+    EmitTerminal(terminal.then_, initial_location, is_single_step);
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::CheckBit terminal, IR::LocationDescriptor initial_location) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::CheckBit terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     FixupBranch fail;
     code.LDRB(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, check_bit));
     fail = code.CBZ(DecodeReg(code.ABI_SCRATCH1));
-    EmitTerminal(terminal.then_, initial_location);
+    EmitTerminal(terminal.then_, initial_location, is_single_step);
     code.SetJumpTarget(fail);
-    EmitTerminal(terminal.else_, initial_location);
+    EmitTerminal(terminal.else_, initial_location, is_single_step);
 }
 
-void A32EmitA64::EmitTerminalImpl(IR::Term::CheckHalt terminal, IR::LocationDescriptor initial_location) {
+void A32EmitA64::EmitTerminalImpl(IR::Term::CheckHalt terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     code.LDRB(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, offsetof(A32JitState, halt_requested));
     // Conditional branch only gives +/- 1MB of branch distance
     FixupBranch zero = code.CBZ(DecodeReg(code.ABI_SCRATCH1));
     code.B(code.GetForceReturnFromRunCodeAddress());
     code.SetJumpTarget(zero);
-    EmitTerminal(terminal.else_, initial_location);
+    EmitTerminal(terminal.else_, initial_location, is_single_step);
 }
 
 void A32EmitA64::EmitPatchJg(const IR::LocationDescriptor& target_desc, CodePtr target_code_ptr) {
