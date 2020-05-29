@@ -45,7 +45,7 @@ public:
 private:
     auto FindCodeBlockInfo(CodePtr PC) {
         return std::find_if(code_block_infos.begin(), code_block_infos.end(),
-                            [&](const CodeBlockInfo& x) { return x.block->GetRegion() <= PC && x.block->GetRegion() + x.block->GetRegionSize(); });
+                            [&](const CodeBlockInfo& x) { return x.block->GetRegion() <= PC && x.block->GetRegion() + x.block->GetRegionSize() > PC; });
     }
 
     std::vector<CodeBlockInfo> code_block_infos;
