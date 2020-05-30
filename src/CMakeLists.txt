@@ -380,7 +380,7 @@ elseif(ARCHITECTURE_Aarch64)
         )
     endif()
     
-    if (ANDROID)
+    if (UNIX)
         target_sources(dynarmic PRIVATE backend/A64/exception_handler_posix.cpp)
     else()
         target_sources(dynarmic PRIVATE backend/A64/exception_handler_generic.cpp)
