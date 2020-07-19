@@ -14,6 +14,7 @@
 #include "backend/A64/constant_pool.h"
 #include "backend/A64/jitstate_info.h"
 #include "backend/A64/emitter/a64_emitter.h"
+#include "common/cast_util.h"
 #include "common/common_types.h"
 
 namespace Dynarmic::BackendA64 {
@@ -65,6 +66,12 @@ public:
     /// @note this clobbers ABI caller-save registers
     void LookupBlock();
 
+    /// Code emitter: Calls the lambda. Lambda must not have any captures.
+    template <typename Lambda>
+    void CallLambda(Lambda l) {
+        QuickCallFunction(Common::FptrCast(l));
+    }
+    
     u64 MConst(u64 lower, u64 upper = 0);
 
     void EmitPatchLDR(Arm64Gen::ARM64Reg Rt, u64 lower, u64 upper = 0);

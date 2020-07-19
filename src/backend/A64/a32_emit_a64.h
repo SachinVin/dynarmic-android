@@ -92,6 +92,10 @@ protected:
     void ReadMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr callback_fn);
     template<typename T>
     void WriteMemory(A32EmitContext& ctx, IR::Inst* inst, const CodePtr callback_fn);
+    template<std::size_t bitsize, auto callback>
+    void ExclusiveReadMemory(A32EmitContext& ctx, IR::Inst* inst);
+    template<std::size_t bitsize, auto callback>
+    void ExclusiveWriteMemory(A32EmitContext& ctx, IR::Inst* inst);
 
     const void* terminal_handler_pop_rsb_hint;
     const void* terminal_handler_fast_dispatch_hint = nullptr;
