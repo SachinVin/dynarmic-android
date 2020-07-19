@@ -237,7 +237,7 @@ void EmitA64::EmitLogicalShiftLeft32(EmitContext& ctx, IR::Inst* inst) {
                 code.MOV(carry, WZR);
             } else {
                 code.ANDI2R(carry, result, 1);
-                code.MOV(result, WZR);                
+                code.MOV(result, WZR);
             }
 
             ctx.reg_alloc.DefineValue(carry_inst, carry);

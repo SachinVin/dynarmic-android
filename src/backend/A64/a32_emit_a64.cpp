@@ -184,7 +184,7 @@ void A32EmitA64::EmitCondPrelude(const A32EmitContext& ctx) {
 }
 
 void A32EmitA64::ClearFastDispatchTable() {
-    if (config.enable_fast_dispatch) {
+    if (config.HasOptimization(OptimizationFlag::FastDispatch)) {
         fast_dispatch_table.fill({});
     }
 }
@@ -313,7 +313,7 @@ void A32EmitA64::GenTerminalHandlers() {
     code.ADD(code.ABI_SCRATCH1, X28, code.ABI_SCRATCH1, ArithOption{code.ABI_SCRATCH1, ST_LSL, 3});
     code.LDR(INDEX_UNSIGNED, X8, code.ABI_SCRATCH1, offsetof(A32JitState, rsb_location_descriptors));
     code.CMP(location_descriptor_reg, X8);
-    if (config.enable_fast_dispatch) {
+    if (config.HasOptimization(OptimizationFlag::FastDispatch)) {
         rsb_cache_miss = code.B(CC_NEQ);
     } else {
         code.B(CC_NEQ, code.GetReturnFromRunCodeAddress());
@@ -322,7 +322,7 @@ void A32EmitA64::GenTerminalHandlers() {
     code.BR(code.ABI_SCRATCH1);
     PerfMapRegister(terminal_handler_pop_rsb_hint, code.GetCodePtr(), "a32_terminal_handler_pop_rsb_hint");
 
-    if (config.enable_fast_dispatch) {
+    if (config.HasOptimization(OptimizationFlag::FastDispatch)) {
         terminal_handler_fast_dispatch_hint = code.AlignCode16();
         calculate_location_descriptor();
         code.SetJumpTarget(rsb_cache_miss);
@@ -1450,7 +1450,7 @@ void A32EmitA64::EmitSetUpperLocationDescriptor(IR::LocationDescriptor new_locat
 void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     EmitSetUpperLocationDescriptor(terminal.next, initial_location);
 
-    if (!config.enable_optimizations || is_single_step) {
+    if (!config.HasOptimization(OptimizationFlag::BlockLinking) || is_single_step) {
         code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), A32::LocationDescriptor{terminal.next}.PC());
         code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, MJitStateReg(A32::Reg::PC));
         code.ReturnFromRunCode();
@@ -1484,7 +1484,7 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlock terminal, IR::LocationDesc
 void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlockFast terminal, IR::LocationDescriptor initial_location, bool is_single_step) {
     EmitSetUpperLocationDescriptor(terminal.next, initial_location);
     
-    if (!config.enable_optimizations || is_single_step) {
+    if (!config.HasOptimization(OptimizationFlag::BlockLinking) || is_single_step) {
         code.MOVI2R(DecodeReg(code.ABI_SCRATCH1), A32::LocationDescriptor{terminal.next}.PC());
         code.STR(INDEX_UNSIGNED, DecodeReg(code.ABI_SCRATCH1), X28, MJitStateReg(A32::Reg::PC));
         code.ReturnFromRunCode();
@@ -1500,7 +1500,7 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::LinkBlockFast terminal, IR::Location
 }
 
 void A32EmitA64::EmitTerminalImpl(IR::Term::PopRSBHint, IR::LocationDescriptor, bool is_single_step) {
-    if (!config.enable_optimizations || is_single_step) {
+    if (!config.HasOptimization(OptimizationFlag::ReturnStackBuffer) || is_single_step) {
         code.ReturnFromRunCode();
         return;
     }
@@ -1508,7 +1508,7 @@ void A32EmitA64::EmitTerminalImpl(IR::Term::PopRSBHint, IR::LocationDescriptor, 
 }
 
 void A32EmitA64::EmitTerminalImpl(IR::Term::FastDispatchHint, IR::LocationDescriptor, bool is_single_step) {
-    if (config.enable_fast_dispatch && !is_single_step) {
+    if (config.HasOptimization(OptimizationFlag::FastDispatch) && !is_single_step) {
         code.B(terminal_handler_fast_dispatch_hint);
     } else {
         code.ReturnFromRunCode();
@@ -1589,7 +1589,7 @@ void A32EmitA64::EmitPatchMovX0(CodePtr target_code_ptr) {
 
 void A32EmitA64::Unpatch(const IR::LocationDescriptor& location) {
     EmitA64::Unpatch(location);
-    if (config.enable_fast_dispatch) {
+    if (config.HasOptimization(OptimizationFlag::FastDispatch)) {
         (*fast_dispatch_table_lookup)(location.Value()) = {};
     }
 }
