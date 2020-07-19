@@ -448,6 +448,10 @@ void EmitA64::EmitPackedAbsDiffSumS8(EmitContext& ctx, IR::Inst* inst) {
     const ARM64Reg a = EncodeRegToDouble(ctx.reg_alloc.UseScratchFpr(args[0]));
     const ARM64Reg b = EncodeRegToDouble(ctx.reg_alloc.UseFpr(args[1]));
 
+    // Keep only the lower 32 bits.
+    code.fp_emitter.FMOV(EncodeRegToSingle(a),EncodeRegToSingle(a));
+    code.fp_emitter.FMOV(EncodeRegToSingle(b),EncodeRegToSingle(b));
+    
     code.fp_emitter.UABD(B, a, a, b);
     code.fp_emitter.UADDLV(B, a, a);
 
